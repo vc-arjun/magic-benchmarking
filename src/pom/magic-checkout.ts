@@ -28,7 +28,7 @@ class MagicCheckoutPOM implements POM {
     }
   }
 
-  public async triggerCheckout(): Promise<void> {
+  public async triggerCheckout(skipMetrics: boolean = false): Promise<void> {
     try {
       console.log(`Triggering checkout for ${this.productConfig.name}`);
 
@@ -66,7 +66,9 @@ class MagicCheckoutPOM implements POM {
       );
 
       // Store the metric
-      this.performanceMonitor.setInitialLoadMetric('click_to_content', duration, 'ms');
+      if (!skipMetrics) {
+        this.performanceMonitor.setInitialLoadMetric('click_to_content', duration, 'ms');
+      }
 
       console.log(`✅ Checkout triggered successfully for ${this.productConfig.name}`);
     } catch (error) {

@@ -1,4 +1,4 @@
 export interface POM {
   initialize(): Promise<void>;
-  triggerCheckout(): Promise<void>;
+  triggerCheckout(skipMetrics: boolean): Promise<void>;
 }

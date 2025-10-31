@@ -2,10 +2,15 @@ import { Page } from 'playwright';
 import { InitialLoadMetrics, Metrics } from './types/metrics';
 
 export class PerformanceMonitor {
-  private page: Page;
+  private page: Page | null = null;
   private metrics: Metrics | null = null;
 
-  constructor(page: Page) {
+  constructor() {}
+
+  /**
+   * Update the page instance for fresh browser contexts
+   */
+  public setPage(page: Page): void {
     this.page = page;
   }
 
@@ -13,7 +18,7 @@ export class PerformanceMonitor {
    * Mark the start of performance measurement
    */
   public async markStart(markName: string): Promise<void> {
-    await this.page.evaluate((name) => {
+    await this.page?.evaluate((name) => {
       performance.mark(name);
     }, markName);
   }
@@ -22,7 +27,7 @@ export class PerformanceMonitor {
    * Mark the end of performance measurement and calculate duration
    */
   public async markEnd(markName: string, startMark: string): Promise<number> {
-    const duration = await this.page.evaluate(
+    const duration = await this.page?.evaluate(
       ({ endMark, startMark }) => {
         performance.mark(endMark);
         const measure = performance.measure(`${startMark}-to-${endMark}`, startMark, endMark);
@@ -31,19 +36,21 @@ export class PerformanceMonitor {
       { endMark: markName, startMark }
     );
 
-    return duration;
+    return duration ?? 0;
   }
 
   /**
    * Measure time between two performance marks
    */
   public async measureDuration(startMark: string, endMark: string): Promise<number> {
-    return await this.page.evaluate(
-      ({ name, start, end }) => {
-        const measure = performance.measure(name, start, end);
-        return measure.duration;
-      },
-      { name: `${startMark}-to-${endMark}`, start: startMark, end: endMark }
+    return (
+      (await this.page?.evaluate(
+        ({ name, start, end }) => {
+          const measure = performance.measure(name, start, end);
+          return measure.duration ?? 0;
+        },
+        { name: `${startMark}-to-${endMark}`, start: startMark, end: endMark }
+      )) ?? 0
     );
   }
 

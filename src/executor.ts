@@ -5,71 +5,81 @@ import { CONFIG } from './config';
 import { PerformanceMonitor } from './performance';
 
 export class TestExecutor {
-  private pom: POM | null = null;
   private product: ProductConfig;
-  private page: Page | null = null;
-  private browser: Browser | null = null;
-  private context: BrowserContext | null = null;
   private config: Config;
-  private performanceMonitor: PerformanceMonitor | null = null;
+  private performanceMonitor: PerformanceMonitor;
 
   constructor(product: ProductConfig) {
     this.product = product;
     this.config = CONFIG;
-  }
-
-  async initialize(): Promise<void> {
-    try {
-      console.log(`Initializing executor for ${this.product.name}`);
-      this.browser = await chromium.launch({
-        headless: this.config.execution.headless,
-        timeout: this.config.execution.timeout,
-      });
-      this.context = await this.browser.newContext();
-      this.page = await this.context.newPage();
-      this.performanceMonitor = new PerformanceMonitor(this.page);
-      const pomModule = await import(`./pom/${this.product.pom_file}`);
-      this.pom = new pomModule.default(this.page, this.product, this.performanceMonitor);
-      console.log(`Executor initialized for ${this.product.name}`);
-    } catch (error) {
-      console.log(`Failed to initialize executor for ${this.product.name}: ${error}`);
-      throw error;
-    }
+    this.performanceMonitor = new PerformanceMonitor();
   }
 
   async run(): Promise<void> {
     try {
       console.log(`Starting execution for ${this.product.name}`);
       for (let i = 0; i < this.config.execution.iterations; i++) {
-        await this.pom?.initialize();
-        await this.performInitialLoadBenchmark();
+        console.log(`\n--- Starting iteration ${i + 1}/${this.config.execution.iterations} ---`);
+        await this.runIteration(i + 1);
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
-      console.log(`Execution completed for ${this.product.name}`);
+      console.log(`\n🎉 Execution completed for ${this.product.name}`);
     } catch (error) {
       console.log(`Failed to execute for ${this.product.name}: ${error}`);
       throw error;
     }
   }
 
-  async performInitialLoadBenchmark(): Promise<void> {
+  /**
+   * Run a single iteration with fresh browser process
+   */
+  private async runIteration(iterationNumber: number): Promise<void> {
+    let browser: Browser | null = null;
+    let context: BrowserContext | null = null;
+    let page: Page | null = null;
+    let pom: POM | null = null;
+
+    try {
+      browser = await chromium.launch({
+        headless: this.config.execution.headless,
+        timeout: this.config.execution.timeout,
+      });
+
+      context = await browser.newContext();
+      page = await context.newPage();
+
+      if (!this.performanceMonitor) {
+        throw new Error('Performance monitor not initialized');
+      }
+      this.performanceMonitor.setPage(page);
+
+      const pomModule = await import(`./pom/${this.product.pom_file}`);
+      pom = new pomModule.default(page, this.product, this.performanceMonitor);
+
+      // Initialize and run the test
+      if (!pom) {
+        throw new Error('Failed to create POM instance');
+      }
+      await pom.initialize();
+      await this.performInitialLoadBenchmark(pom, iterationNumber === 1);
+
+      console.log(`✅ Iteration ${iterationNumber} completed successfully`);
+    } catch (error) {
+      console.log(`❌ Iteration ${iterationNumber} failed: ${error}`);
+      throw error;
+    } finally {
+      await page?.close();
+      await context?.close();
+      await browser?.close();
+    }
+  }
+
+  private async performInitialLoadBenchmark(pom: POM,skipMetrics: boolean = false): Promise<void> {
     // Trigger checkout and capture performance metrics
     if (!this.performanceMonitor) {
       throw new Error('Performance monitor not initialized');
     }
-    await this.pom?.triggerCheckout();
-  }
-
-  async cleanup(): Promise<void> {
-    try {
-      console.log(`\nCleaning up executor for ${this.product.name}`);
-      await this.page?.close();
-      await this.context?.close();
-      await this.browser?.close();
-      console.log(`Executor cleaned up for ${this.product.name}`);
-    } catch (error) {
-      console.log(`Failed to cleanup executor for ${this.product.name}: ${error}`);
-      throw error;
-    }
+    await pom.triggerCheckout(skipMetrics);
   }
 
   /**
