@@ -4,7 +4,7 @@ export const CONFIG: Config = {
   products: [
     {
       name: 'MagicCheckout',
-      entry_url: 'https://vsmani.com/',
+      entry_url: 'https://razorpay.com/demopg3/',
       pom_file: 'magic-checkout.ts',
       enabled: true,
     },
@@ -48,7 +48,7 @@ export const CONFIG: Config = {
     },
   },
   execution: {
-    iterations:1,
+    iterations: 5,
     timeout: 60000,
     headless: false,
     browsers: ['chromium'],
