@@ -12,7 +12,12 @@ class MagicCheckoutPOM implements POM {
   private performanceMonitor: PerformanceMonitor;
   private networkMonitor: NetworkMonitor;
 
-  constructor(page: Page, productConfig: ProductConfig, performanceMonitor: PerformanceMonitor, networkMonitor: NetworkMonitor) {
+  constructor(
+    page: Page,
+    productConfig: ProductConfig,
+    performanceMonitor: PerformanceMonitor,
+    networkMonitor: NetworkMonitor
+  ) {
     this.page = page;
     this.productConfig = productConfig;
     this.performanceMonitor = performanceMonitor;

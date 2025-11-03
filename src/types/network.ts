@@ -1,6 +1,14 @@
 import { ExecutionContext } from './metrics';
 
-export type NetworkRequestType = 'document' | 'script' | 'stylesheet' | 'image' | 'font' | 'xhr' | 'fetch' | 'other';
+export type NetworkRequestType =
+  | 'document'
+  | 'script'
+  | 'stylesheet'
+  | 'image'
+  | 'font'
+  | 'xhr'
+  | 'fetch'
+  | 'other';
 
 export type NetworkRequest = {
   id: string;

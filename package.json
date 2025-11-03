@@ -9,10 +9,10 @@
     "start": "npm run build && node dist/index.js",
     "debug": "npm run build && node --inspect dist/index.js",
     "clean": "rm -rf dist",
-    "lint": "eslint src/**/*.ts --max-warnings 0",
-    "lint:fix": "eslint src/**/*.ts --fix --max-warnings 0",
-    "pretty:fix": "prettier --write src/**/*.ts",
-    "pretty": "prettier --check src/**/*.ts"
+    "lint": "eslint src/**/*.ts --max-warnings 0 && cd dashboard && npm run lint && cd ..",
+    "lint:fix": "eslint src/**/*.ts --fix --max-warnings 0 && cd dashboard && npm run lint:fix && cd ..",
+    "pretty:fix": "prettier --write src/**/*.ts dashboard/**/*.{ts,tsx,css,html,json}",
+    "pretty": "prettier --check src/**/*.ts dashboard/**/*.{ts,tsx,css,html,json}"
   },
   "keywords": [],
   "author": "arjun.vc@razorpay.com",

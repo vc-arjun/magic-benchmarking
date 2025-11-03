@@ -177,6 +177,10 @@ screenshots/
 *.jpeg
 *.gif
 
+# Dashboard specific
+dashboard/dist/
+dashboard/build/
+
 # OS generated files
 .DS_Store
 .DS_Store?
