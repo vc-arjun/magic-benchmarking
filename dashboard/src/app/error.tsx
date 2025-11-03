@@ -36,22 +36,23 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
           <h1 className="text-4xl font-black bg-gradient-to-r from-red-600 via-orange-600 to-red-600 bg-clip-text text-transparent mb-4">
             Oops! Something went wrong
           </h1>
-          
+
           <p className="text-xl text-gray-700 mb-6 leading-relaxed">
-            We encountered an unexpected error while loading the dashboard. Don't worry, our team has been notified.
+            We encountered an unexpected error while loading the dashboard. Don&apos;t worry, our
+            team has been notified.
           </p>
 
           {/* Error Details (only in development) */}
           {process.env.NODE_ENV === 'development' && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-left">
-              <h3 className="text-sm font-semibold text-red-800 mb-2">Error Details (Development Only):</h3>
+              <h3 className="text-sm font-semibold text-red-800 mb-2">
+                Error Details (Development Only):
+              </h3>
               <pre className="text-xs text-red-700 overflow-x-auto whitespace-pre-wrap break-words">
                 {error.message}
               </pre>
               {error.digest && (
-                <p className="text-xs text-red-600 mt-2">
-                  Error ID: {error.digest}
-                </p>
+                <p className="text-xs text-red-600 mt-2">Error ID: {error.digest}</p>
               )}
             </div>
           )}
@@ -79,13 +80,13 @@ export default function ErrorPage({ error, reset }: ErrorPageProps) {
           <div className="mt-8 pt-6 border-t border-gray-200">
             <p className="text-sm text-gray-600">
               If this problem persists, please{' '}
-              <button 
-                onClick={() => window.location.reload()} 
+              <button
+                onClick={() => window.location.reload()}
                 className="text-red-600 hover:text-red-700 font-medium underline"
               >
                 refresh the page
-              </button>
-              {' '}or contact support.
+              </button>{' '}
+              or contact support.
             </p>
           </div>
         </div>

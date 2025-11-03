@@ -5,6 +5,6 @@ type Props = {
   data: NetworkResults;
 };
 
-export const NetworkCharts: React.FC<Props> = ({ data }) => {
+export const NetworkCharts: React.FC<Props> = () => {
   return <div>NetworkCharts</div>;
 };

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Search, Home, ArrowLeft, FileX, BarChart3 } from 'lucide-react';
+import { Search, Home, FileX, BarChart3 } from 'lucide-react';
 
 export default function NotFoundPage() {
   return (
@@ -36,8 +36,8 @@ export default function NotFoundPage() {
           </div>
 
           <p className="text-xl text-gray-700 mb-8 leading-relaxed">
-            The page you're looking for doesn't exist or may have been moved. Let's get you back to
-            analyzing your performance data!
+            The page you&apos;re looking for doesn&apos;t exist or may have been moved. Let&apos;s
+            get you back to analyzing your performance data!
           </p>
 
           {/* Suggestions */}

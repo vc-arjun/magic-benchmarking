@@ -1,6 +1,6 @@
 import { ReportFile } from '@/types/reports';
 import { timeToReadable } from '@/utils';
-import { BarChart3, Globe, Network } from 'lucide-react';
+import { BarChart3, Globe } from 'lucide-react';
 import Link from 'next/link';
 import React from 'react';
 

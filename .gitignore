@@ -170,7 +170,6 @@ playwright-report/
 playwright/.cache/
 
 # Performance benchmarking specific
-results/
 screenshots/
 *.png
 *.jpg
