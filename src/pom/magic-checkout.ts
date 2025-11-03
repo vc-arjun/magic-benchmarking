@@ -3,17 +3,20 @@ import { POM } from '../types/pom';
 import { ProductConfig } from '../types/config';
 import { expect } from '@playwright/test';
 import { PerformanceMonitor } from '../performance';
+import { NetworkMonitor } from '../network-monitor';
 import { PERFORMANCE_MARKERS } from '../constants/performance';
 
 class MagicCheckoutPOM implements POM {
   private page: Page;
   private productConfig: ProductConfig;
   private performanceMonitor: PerformanceMonitor;
+  private networkMonitor: NetworkMonitor;
 
-  constructor(page: Page, productConfig: ProductConfig, performanceMonitor: PerformanceMonitor) {
+  constructor(page: Page, productConfig: ProductConfig, performanceMonitor: PerformanceMonitor, networkMonitor: NetworkMonitor) {
     this.page = page;
     this.productConfig = productConfig;
     this.performanceMonitor = performanceMonitor;
+    this.networkMonitor = networkMonitor;
   }
 
   public async initialize(): Promise<void> {
@@ -52,6 +55,12 @@ class MagicCheckoutPOM implements POM {
       await expect(checkoutFrame.locator('body')).toBeVisible();
       await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.POPUP_APPEARS);
 
+      // Start network monitoring from popup appearance
+      if (!skipMetrics) {
+        console.log('🔍 Starting network monitoring for Razorpay requests...');
+        await this.networkMonitor.startMonitoring();
+      }
+
       // Wait for the contact number input to be visible and mark content appearance
       const contactNumberInput = checkoutFrame.getByTestId('contactNumber');
       await expect(contactNumberInput).toBeVisible();
@@ -60,6 +69,12 @@ class MagicCheckoutPOM implements POM {
       // Wait for main thread to be idle and mark idle state
       await this.performanceMonitor.waitForMainThreadIdle();
       await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.MAIN_THREAD_IDLE);
+
+      // Stop network monitoring when main thread is idle
+      if (!skipMetrics) {
+        await this.networkMonitor.stopMonitoring();
+        console.log('🔍 Network monitoring stopped - main thread is idle');
+      }
 
       // Calculate and store all metrics
       if (!skipMetrics) {

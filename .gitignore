@@ -80,7 +80,6 @@ dist
 
 # Gatsby files
 .cache/
-public
 
 # Storybook build outputs
 .out
@@ -142,10 +141,6 @@ node_modules/
 # rollup.js default build output
 dist/
 
-# Uncomment the public line in if your project uses Gatsby
-# https://nextjs.org/blog/next-9-1#public-directory-support
-# https://create-react-app.dev/docs/using-the-public-folder/#docsNav
-# public
 
 # Storybook build outputs
 .out

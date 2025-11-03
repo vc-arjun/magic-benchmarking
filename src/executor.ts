@@ -3,17 +3,21 @@ import { Config, ProductConfig } from './types/config';
 import { POM } from './types/pom';
 import { CONFIG } from './config';
 import { PerformanceMonitor } from './performance';
+import { NetworkMonitor } from './network-monitor';
 import { ExecutionContext, ContextResults, Measurement, InitialLoadMetrics, ProductResults, MetricStatistics } from './types/metrics';
+import { NetworkResults } from './types/network';
 
 export class TestExecutor {
   private product: ProductConfig;
   private config: Config;
   private performanceMonitor: PerformanceMonitor;
+  private networkMonitor: NetworkMonitor;
 
   constructor(product: ProductConfig) {
     this.product = product;
     this.config = CONFIG;
     this.performanceMonitor = new PerformanceMonitor();
+    this.networkMonitor = new NetworkMonitor();
   }
 
   async run(): Promise<void> {
@@ -127,6 +131,7 @@ export class TestExecutor {
         throw new Error('Performance monitor not initialized');
       }
       this.performanceMonitor.setPage(page);
+      this.networkMonitor.setPage(page);
 
       // Set execution context for measurements
       if (!skipMetrics) {
@@ -137,10 +142,11 @@ export class TestExecutor {
           browser: 'chromium',
         };
         this.performanceMonitor.setExecutionContext(executionContext, iteration);
+        this.networkMonitor.setExecutionContext(executionContext, iteration);
       }
 
       const pomModule = await import(`./pom/${this.product.pom_file}`);
-      pom = new pomModule.default(page, this.product, this.performanceMonitor);
+      pom = new pomModule.default(page, this.product, this.performanceMonitor, this.networkMonitor);
 
       // Initialize and run the test
       if (!pom) {
@@ -168,6 +174,18 @@ export class TestExecutor {
    */
   public getResults(): ProductResults {
     return this.buildProductResults();
+  }
+
+  /**
+   * Get network monitoring results for this product
+   */
+  public getNetworkResults(): NetworkResults {
+    return {
+      product: this.product.name,
+      timestamp: new Date().toISOString(),
+      monitoringPhase: 'popup_to_interactive',
+      results: this.networkMonitor.getNetworkResults(),
+    };
   }
 
   /**
