@@ -83,18 +83,18 @@ export class ResultsManager {
     // CSV Header
     const headers = [
       'Product',
-      'Timestamp',
       'Network',
       'CPU',
       'User State', 
       'Browser',
-      'Metric',
       'Metric Name',
       'Metric Description',
-      'Iteration',
-      'Value',
+      'Iterations',
       'Unit',
-      'Measurement Timestamp'
+      'Min',
+      'Max',
+      'Mean',
+      'Count'
     ];
     rows.push(headers.join(','));
 
@@ -103,28 +103,33 @@ export class ResultsManager {
       for (const contextResult of productResult.results) {
         const { context } = contextResult;
         
-        for (const [metricKey, measurements] of Object.entries(contextResult.metrics)) {
+        for (const [metricKey, metricData] of Object.entries(contextResult.metrics)) {
           const metricName = metricKey as InitialLoadMetrics;
           const metadata = results.metrics_metadata[metricName];
+          const { measurements, statistics } = metricData;
           
-          for (const measurement of measurements) {
-            const row = [
-              this.escapeCSV(productResult.product),
-              this.escapeCSV(results.timestamp),
-              this.escapeCSV(context.network),
-              this.escapeCSV(context.cpu),
-              this.escapeCSV(context.user_state),
-              this.escapeCSV(context.browser),
-              this.escapeCSV(metricName),
-              this.escapeCSV(metadata.name),
-              this.escapeCSV(metadata.description),
-              measurement.iteration.toString(),
-              measurement.value.toString(),
-              this.escapeCSV(measurement.unit),
-              this.escapeCSV(measurement.timestamp)
-            ];
-            rows.push(row.join(','));
-          }
+          // Create iterations string with all values rounded to 2 decimal places
+          const iterationsValues = measurements
+            .sort((a, b) => a.iteration - b.iteration) // Sort by iteration number
+            .map(m => (Math.round(m.value * 100) / 100).toString())
+            .join('; '); // Use semicolon separator for clarity
+          
+          const row = [
+            this.escapeCSV(productResult.product),
+            this.escapeCSV(context.network),
+            this.escapeCSV(context.cpu),
+            this.escapeCSV(context.user_state),
+            this.escapeCSV(context.browser),
+            this.escapeCSV(metadata.name),
+            this.escapeCSV(metadata.description),
+            this.escapeCSV(iterationsValues),
+            this.escapeCSV(measurements[0]?.unit || 'ms'),
+            (Math.round(statistics.min * 100) / 100).toString(),
+            (Math.round(statistics.max * 100) / 100).toString(),
+            (Math.round(statistics.mean * 100) / 100).toString(),
+            statistics.count.toString()
+          ];
+          rows.push(row.join(','));
         }
       }
     }

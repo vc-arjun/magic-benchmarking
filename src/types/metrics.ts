@@ -18,7 +18,13 @@ export type Measurement = {
   iteration: number;
   value: number;
   unit: string;
-  timestamp: string;
+};
+
+export type MetricStatistics = {
+  min: number;
+  max: number;
+  mean: number;
+  count: number;
 };
 
 export type MetricMetadata = {
@@ -28,7 +34,10 @@ export type MetricMetadata = {
 
 export type ContextResults = {
   context: ExecutionContext;
-  metrics: Record<InitialLoadMetrics, Measurement[]>;
+  metrics: Record<InitialLoadMetrics, {
+    measurements: Measurement[];
+    statistics: MetricStatistics;
+  }>;
 };
 
 export type ProductResults = {

@@ -77,7 +77,6 @@ export class PerformanceMonitor {
       iteration: this.currentIteration,
       value,
       unit,
-      timestamp: new Date().toISOString(),
     };
 
     const key = `${contextKey}:${metricName}`;

@@ -3,7 +3,7 @@ import { Config, ProductConfig } from './types/config';
 import { POM } from './types/pom';
 import { CONFIG } from './config';
 import { PerformanceMonitor } from './performance';
-import { ExecutionContext, ContextResults, Measurement, InitialLoadMetrics, ProductResults } from './types/metrics';
+import { ExecutionContext, ContextResults, Measurement, InitialLoadMetrics, ProductResults, MetricStatistics } from './types/metrics';
 
 export class TestExecutor {
   private product: ProductConfig;
@@ -93,6 +93,10 @@ export class TestExecutor {
 
       context = await browser.newContext();
       page = await context.newPage();
+      
+      // Set page timeout to match our config, especially important for slow network conditions
+      page.setDefaultTimeout(this.config.execution.timeout);
+      page.setDefaultNavigationTimeout(this.config.execution.timeout);
 
       // Apply network throttling
       const networkConfig = this.config.execution_matrix.network[combination.network];
@@ -197,21 +201,46 @@ export class TestExecutor {
         browser,
       };
 
-      const metrics: Record<string, Measurement[]> = {};
+      const metrics: Record<string, { measurements: Measurement[]; statistics: MetricStatistics }> = {};
       
       for (const [metricName, measurementList] of metricGroups) {
-        metrics[metricName] = measurementList;
+        const statistics = this.calculateStatistics(measurementList);
+        metrics[metricName] = {
+          measurements: measurementList,
+          statistics,
+        };
       }
 
       contextResults.push({
         context,
-        metrics: metrics as Record<InitialLoadMetrics, Measurement[]>,
+        metrics: metrics as Record<InitialLoadMetrics, { measurements: Measurement[]; statistics: MetricStatistics }>,
       });
     }
 
     return {
       product: this.product.name,
       results: contextResults,
+    };
+  }
+
+  /**
+   * Calculate statistics for a list of measurements
+   */
+  private calculateStatistics(measurements: Measurement[]): MetricStatistics {
+    if (measurements.length === 0) {
+      return { min: 0, max: 0, mean: 0, count: 0 };
+    }
+
+    const values = measurements.map(m => m.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+
+    return {
+      min,
+      max,
+      mean: Math.round(mean * 100) / 100, // Round to 2 decimal places
+      count: measurements.length,
     };
   }
 

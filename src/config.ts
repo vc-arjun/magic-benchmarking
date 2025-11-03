@@ -37,8 +37,8 @@ export const CONFIG: Config = {
     },
   },
   execution: {
-    iterations: 1,
-    timeout: 60000,
+    iterations: 2,
+    timeout: 120000, // 2 minutes for slow network conditions
     headless: false,
     browsers: ['chromium'],
   },
