@@ -9,7 +9,7 @@ const Dashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <div className="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
                 <span className="text-blue-600 text-sm font-medium">⚡</span>
               </div>
@@ -23,7 +23,7 @@ const Dashboard = () => {
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <div className="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
                 <span className="text-green-600 text-sm font-medium">✓</span>
               </div>
@@ -37,7 +37,7 @@ const Dashboard = () => {
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <div className="w-8 h-8 bg-yellow-100 rounded-md flex items-center justify-center">
                 <span className="text-yellow-600 text-sm font-medium">📊</span>
               </div>
@@ -51,7 +51,7 @@ const Dashboard = () => {
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <div className="w-8 h-8 bg-purple-100 rounded-md flex items-center justify-center">
                 <span className="text-purple-600 text-sm font-medium">🌐</span>
               </div>
