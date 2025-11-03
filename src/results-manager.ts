@@ -74,7 +74,7 @@ export class ResultsManager {
 
     const consolidatedNetworkResults = {
       timestamp: new Date().toISOString(),
-      monitoringPhase: 'popup_to_interactive',
+      monitoring_phase: 'popup_to_interactive',
       description: 'Network request analysis for Razorpay requests during MagicCheckout widget loading',
       products: this.networkResults,
     };

@@ -97,6 +97,6 @@ export type ContextNetworkResults = {
 export type NetworkResults = {
   product: string;
   timestamp: string;
-  monitoringPhase: 'popup_to_interactive';
+  monitoring_phase: 'popup_to_interactive';
   results: ContextNetworkResults[];
 };

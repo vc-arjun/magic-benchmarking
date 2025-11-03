@@ -183,7 +183,7 @@ export class TestExecutor {
     return {
       product: this.product.name,
       timestamp: new Date().toISOString(),
-      monitoringPhase: 'popup_to_interactive',
+      monitoring_phase: 'popup_to_interactive',
       results: this.networkMonitor.getNetworkResults(),
     };
   }
