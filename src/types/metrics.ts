@@ -34,10 +34,13 @@ export type MetricMetadata = {
 
 export type ContextResults = {
   context: ExecutionContext;
-  metrics: Record<InitialLoadMetrics, {
-    measurements: Measurement[];
-    statistics: MetricStatistics;
-  }>;
+  metrics: Record<
+    InitialLoadMetrics,
+    {
+      measurements: Measurement[];
+      statistics: MetricStatistics;
+    }
+  >;
 };
 
 export type ProductResults = {
