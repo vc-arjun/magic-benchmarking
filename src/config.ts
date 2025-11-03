@@ -12,18 +12,13 @@ export const CONFIG: Config = {
   execution_matrix: {
     network: {
       slow_4g: {
-        download_throughput: 500000,
-        upload_throughput: 500000,
-        latency: 400,
-      },
-      fast_4g: {
-        download_throughput: 4000000,
-        upload_throughput: 3000000,
-        latency: 20,
+        download_throughput: 500000, // 500kbps 
+        upload_throughput: 500000, // 500kbps
+        latency: 400, // 400ms
       },
       no_throttling: {
-        download_throughput: 0,
-        upload_throughput: 0,
+        download_throughput: 0, // 0Mbps 
+        upload_throughput: 0, // 0Mbps  
         latency: 0,
       },
     },
@@ -34,14 +29,8 @@ export const CONFIG: Config = {
       '4x_slowdown': {
         rate: 4,
       },
-      '6x_slowdown': {
-        rate: 6,
-      },
     },
     user_state: {
-      returning_user: {
-        is_logged_in: false,
-      },
       new_user: {
         is_logged_in: true,
       },
@@ -54,7 +43,7 @@ export const CONFIG: Config = {
     browsers: ['chromium'],
   },
   output: {
-    formats: ['csv'],
+    formats: ['json'],
     directory: './results',
   },
 };

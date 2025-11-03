@@ -1,9 +1,11 @@
 import { Page } from 'playwright';
-import { InitialLoadMetrics, Metrics } from './types/metrics';
+import { InitialLoadMetrics, ExecutionContext, Measurement } from './types/metrics';
 
 export class PerformanceMonitor {
   private page: Page | null = null;
-  private metrics: Metrics | null = null;
+  private currentExecutionContext: ExecutionContext | null = null;
+  private currentIteration: number = 0;
+  private measurements: Map<string, Measurement[]> = new Map();
 
   constructor() {}
 
@@ -55,36 +57,55 @@ export class PerformanceMonitor {
   }
 
   /**
-   * Get all performance metrics
+   * Set the current execution context and iteration
    */
-  public getMetrics(): Metrics {
-    if (!this.metrics) {
-      throw new Error('Metrics not set');
-    }
-    return this.metrics;
+  public setExecutionContext(context: ExecutionContext, iteration: number): void {
+    this.currentExecutionContext = context;
+    this.currentIteration = iteration;
   }
 
   /**
-   * Set the main metric (Buy Now to Contact Number)
+   * Record a metric measurement
    */
-  public setMetrics(updater: (metrics: Metrics | null) => Metrics | null): void {
-    this.metrics = updater(this.metrics);
+  public recordMetric(metricName: InitialLoadMetrics, value: number, unit: string): void {
+    if (!this.currentExecutionContext) {
+      throw new Error('Execution context must be set before recording metrics');
+    }
+
+    const contextKey = this.getContextKey(this.currentExecutionContext);
+    const measurement: Measurement = {
+      iteration: this.currentIteration,
+      value,
+      unit,
+      timestamp: new Date().toISOString(),
+    };
+
+    const key = `${contextKey}:${metricName}`;
+    if (!this.measurements.has(key)) {
+      this.measurements.set(key, []);
+    }
+    this.measurements.get(key)!.push(measurement);
   }
 
-  public setInitialLoadMetric(metricName: InitialLoadMetrics, value: number, unit: string): void {
-    if (this.metrics) {
-      if (this.metrics.initial_load[metricName]) {
-        this.metrics.initial_load[metricName].push({ value, unit });
-      } else {
-        this.metrics.initial_load[metricName] = [{ value, unit }];
-      }
-    } else {
-      this.metrics = {
-        initial_load: {
-          [metricName]: [{ value, unit }],
-        },
-      } as Metrics;
-    }
+  /**
+   * Get all measurements organized by context
+   */
+  public getAllMeasurements(): Map<string, Measurement[]> {
+    return this.measurements;
+  }
+
+  /**
+   * Reset all measurements
+   */
+  public reset(): void {
+    this.measurements.clear();
+  }
+
+  /**
+   * Generate context key for grouping measurements
+   */
+  private getContextKey(context: ExecutionContext): string {
+    return `${context.network}|${context.cpu}|${context.user_state}|${context.browser}`;
   }
 
   /**

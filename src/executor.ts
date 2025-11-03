@@ -3,6 +3,8 @@ import { Config, ProductConfig } from './types/config';
 import { POM } from './types/pom';
 import { CONFIG } from './config';
 import { PerformanceMonitor } from './performance';
+import { ExecutionContext, BenchmarkResults, ContextResults, MetricMetadata, Measurement, InitialLoadMetrics } from './types/metrics';
+import { METRICS } from './constants/metrics';
 
 export class TestExecutor {
   private product: ProductConfig;
@@ -18,19 +20,31 @@ export class TestExecutor {
   async run(): Promise<void> {
     try {
       console.log(`Starting execution for ${this.product.name}`);
-      for (let i = 0; i < this.config.execution.iterations + 1; i++) {
-        if (i === 0) {
-          console.log(`\n--- Starting warmup iteration ---`);
-          await this.runIteration(true);
-          console.log(`\n--- Warmup iteration completed successfully ---`);
-        } else {
+      
+      // Reset measurements for fresh run
+      this.performanceMonitor.reset();
+      
+      // Get execution matrix combinations
+      const executionCombinations = this.generateExecutionCombinations();
+      
+      for (const combination of executionCombinations) {
+        console.log(`\n--- Testing combination: ${JSON.stringify(combination, null, 2)} ---`);
+        
+        // Warmup iteration
+        console.log(`\n--- Starting warmup iteration ---`);
+        await this.runIteration(combination, 0, true);
+        console.log(`\n--- Warmup iteration completed successfully ---`);
+        
+        // Actual iterations
+        for (let i = 1; i <= this.config.execution.iterations; i++) {
           console.log(`\n--- Starting iteration ${i} of ${this.config.execution.iterations} ---`);
-          await this.runIteration();
+          await this.runIteration(combination, i);
           console.log(`\n--- Iteration ${i} completed successfully ---`);
+          
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
+      
       console.log(`\n🎉 Execution completed for ${this.product.name}`);
     } catch (error) {
       console.log(`Failed to execute for ${this.product.name}: ${error}`);
@@ -39,9 +53,34 @@ export class TestExecutor {
   }
 
   /**
+   * Generate all execution matrix combinations
+   */
+  private generateExecutionCombinations(): Array<{network: string, cpu: string, user_state: string}> {
+    const combinations = [];
+    
+    for (const networkKey of Object.keys(this.config.execution_matrix.network)) {
+      for (const cpuKey of Object.keys(this.config.execution_matrix.cpu)) {
+        for (const userStateKey of Object.keys(this.config.execution_matrix.user_state)) {
+          combinations.push({
+            network: networkKey,
+            cpu: cpuKey,
+            user_state: userStateKey,
+          });
+        }
+      }
+    }
+    
+    return combinations;
+  }
+
+  /**
    * Run a single iteration with fresh browser process
    */
-  private async runIteration(skipMetrics: boolean = false): Promise<void> {
+  private async runIteration(
+    combination: {network: string, cpu: string, user_state: string}, 
+    iteration: number,
+    skipMetrics: boolean = false
+  ): Promise<void> {
     let browser: Browser | null = null;
     let context: BrowserContext | null = null;
     let page: Page | null = null;
@@ -56,10 +95,46 @@ export class TestExecutor {
       context = await browser.newContext();
       page = await context.newPage();
 
+      // Apply network throttling
+      const networkConfig = this.config.execution_matrix.network[combination.network];
+      if (networkConfig.download_throughput > 0) {
+        await page.route('**/*', async (route) => {
+          await route.continue();
+        });
+        
+        const cdpSession = await context.newCDPSession(page);
+        await cdpSession.send('Network.emulateNetworkConditions', {
+          offline: false,
+          downloadThroughput: networkConfig.download_throughput,
+          uploadThroughput: networkConfig.upload_throughput,
+          latency: networkConfig.latency,
+        });
+      }
+
+      // Apply CPU throttling
+      const cpuConfig = this.config.execution_matrix.cpu[combination.cpu];
+      if (cpuConfig.rate > 1) {
+        const cdpSession = await context.newCDPSession(page);
+        await cdpSession.send('Emulation.setCPUThrottlingRate', {
+          rate: cpuConfig.rate,
+        });
+      }
+
       if (!this.performanceMonitor) {
         throw new Error('Performance monitor not initialized');
       }
       this.performanceMonitor.setPage(page);
+
+      // Set execution context for measurements
+      if (!skipMetrics) {
+        const executionContext: ExecutionContext = {
+          network: combination.network,
+          cpu: combination.cpu,
+          user_state: combination.user_state,
+          browser: 'chromium',
+        };
+        this.performanceMonitor.setExecutionContext(executionContext, iteration);
+      }
 
       const pomModule = await import(`./pom/${this.product.pom_file}`);
       pom = new pomModule.default(page, this.product, this.performanceMonitor);
@@ -103,14 +178,77 @@ export class TestExecutor {
 
     const filepath = path.join(resultsDir, finalFilename);
 
-    const reportData = {
+    const results = this.buildResults();
+
+    fs.writeFileSync(filepath, JSON.stringify(results, null, 2));
+    console.log(`Performance results saved to: ${filepath}`);
+  }
+
+  /**
+   * Build the final results structure
+   */
+  private buildResults(): BenchmarkResults {
+    const measurements = this.performanceMonitor.getAllMeasurements();
+    const contextResults: ContextResults[] = [];
+
+    // Build metrics metadata once
+    const metricsMetadata: Record<InitialLoadMetrics, MetricMetadata> = {} as Record<InitialLoadMetrics, MetricMetadata>;
+    for (const metricName of Object.keys(METRICS.initial_load) as InitialLoadMetrics[]) {
+      const metricInfo = METRICS.initial_load[metricName];
+      metricsMetadata[metricName] = {
+        name: metricInfo.name,
+        description: metricInfo.description,
+      };
+    }
+
+    // Group measurements by context
+    const contextGroups = new Map<string, Map<string, Measurement[]>>();
+    
+    for (const [key, measurementList] of measurements) {
+      const [contextKey, metricName] = key.split(':');
+      
+      if (!contextGroups.has(contextKey)) {
+        contextGroups.set(contextKey, new Map());
+      }
+      
+      contextGroups.get(contextKey)!.set(metricName, measurementList);
+    }
+
+    // Build context results
+    for (const [contextKey, metricGroups] of contextGroups) {
+      const [network, cpu, user_state, browser] = contextKey.split('|');
+      
+      const context: ExecutionContext = {
+        network,
+        cpu,
+        user_state,
+        browser,
+      };
+
+      const metrics: Record<string, Measurement[]> = {};
+      
+      for (const [metricName, measurementList] of metricGroups) {
+        metrics[metricName] = measurementList;
+      }
+
+      contextResults.push({
+        context,
+        metrics: metrics as Record<InitialLoadMetrics, Measurement[]>,
+      });
+    }
+
+    return {
       product: this.product.name,
       timestamp: new Date().toISOString(),
-      iterations: this.config.execution.iterations,
-      results: this.performanceMonitor?.getMetrics(),
+      execution_config: {
+        iterations: this.config.execution.iterations,
+        browsers: this.config.execution.browsers,
+        timeout: this.config.execution.timeout,
+        headless: this.config.execution.headless,
+      },
+      execution_matrix: this.config.execution_matrix,
+      metrics_metadata: metricsMetadata,
+      results: contextResults,
     };
-
-    fs.writeFileSync(filepath, JSON.stringify(reportData, null, 2));
-    console.log(`Performance results saved to: ${filepath}`);
   }
 }

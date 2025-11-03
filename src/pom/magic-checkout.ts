@@ -63,56 +63,38 @@ class MagicCheckoutPOM implements POM {
 
       // Calculate and store all metrics
       if (!skipMetrics) {
-        // 1. click_to_popup: Click to popup appearance
-        const clickToPopupDuration = await this.performanceMonitor.measureDuration(
-          PERFORMANCE_MARKERS.CHECKOUT_START,
-          PERFORMANCE_MARKERS.POPUP_APPEARS
-        );
-        this.performanceMonitor.setInitialLoadMetric('click_to_popup', clickToPopupDuration, 'ms');
+        const metrics = [
+          {
+            name: 'click_to_popup' as const,
+            start: PERFORMANCE_MARKERS.CHECKOUT_START,
+            end: PERFORMANCE_MARKERS.POPUP_APPEARS,
+          },
+          {
+            name: 'popup_to_content' as const,
+            start: PERFORMANCE_MARKERS.POPUP_APPEARS,
+            end: PERFORMANCE_MARKERS.CONTENT_APPEARS,
+          },
+          {
+            name: 'click_to_content' as const,
+            start: PERFORMANCE_MARKERS.CHECKOUT_START,
+            end: PERFORMANCE_MARKERS.CONTENT_APPEARS,
+          },
+          {
+            name: 'total_load_time' as const,
+            start: PERFORMANCE_MARKERS.CHECKOUT_START,
+            end: PERFORMANCE_MARKERS.MAIN_THREAD_IDLE,
+          },
+          {
+            name: 'content_to_interactive' as const,
+            start: PERFORMANCE_MARKERS.CONTENT_APPEARS,
+            end: PERFORMANCE_MARKERS.MAIN_THREAD_IDLE,
+          },
+        ];
 
-        // 2. popup_to_content: Popup to content appearance
-        const popupToContentDuration = await this.performanceMonitor.measureDuration(
-          PERFORMANCE_MARKERS.POPUP_APPEARS,
-          PERFORMANCE_MARKERS.CONTENT_APPEARS
-        );
-        this.performanceMonitor.setInitialLoadMetric(
-          'popup_to_content',
-          popupToContentDuration,
-          'ms'
-        );
-
-        // 3. click_to_content: Click to content appearance (existing metric)
-        const clickToContentDuration = await this.performanceMonitor.measureDuration(
-          PERFORMANCE_MARKERS.CHECKOUT_START,
-          PERFORMANCE_MARKERS.CONTENT_APPEARS
-        );
-        this.performanceMonitor.setInitialLoadMetric(
-          'click_to_content',
-          clickToContentDuration,
-          'ms'
-        );
-
-        // 4. total_load_time: Click to main thread idle
-        const totalLoadTimeDuration = await this.performanceMonitor.measureDuration(
-          PERFORMANCE_MARKERS.CHECKOUT_START,
-          PERFORMANCE_MARKERS.MAIN_THREAD_IDLE
-        );
-        this.performanceMonitor.setInitialLoadMetric(
-          'total_load_time',
-          totalLoadTimeDuration,
-          'ms'
-        );
-
-        // 5. content_to_interactive: Content to main thread idle
-        const contentToInteractiveDuration = await this.performanceMonitor.measureDuration(
-          PERFORMANCE_MARKERS.CONTENT_APPEARS,
-          PERFORMANCE_MARKERS.MAIN_THREAD_IDLE
-        );
-        this.performanceMonitor.setInitialLoadMetric(
-          'content_to_interactive',
-          contentToInteractiveDuration,
-          'ms'
-        );
+        for (const metric of metrics) {
+          const duration = await this.performanceMonitor.measureDuration(metric.start, metric.end);
+          this.performanceMonitor.recordMetric(metric.name, duration, 'ms');
+        }
       }
 
       console.log(`✅ Checkout triggered successfully for ${this.productConfig.name}`);
