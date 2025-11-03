@@ -28,10 +28,10 @@ const ReportDetail = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="grid grid-rows-[1fr,8fr] max-h-screen overflow-hidden bg-gradient-to-br from-gray-50 to-blue-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-6 py-4">
+        <div className="mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link href="/" className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -58,7 +58,7 @@ const ReportDetail = () => {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="mx-auto w-full">
         {report.type === 'performance' ? (
           <PerformanceCharts data={report.content as BenchmarkResults} />
         ) : (

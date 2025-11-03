@@ -39,14 +39,19 @@ export const FilterControls: React.FC<Props> = ({
     label: cpu.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
   }));
 
+  const userStateOptions = Object.keys(data.execution_matrix.user_state).map((userState) => ({
+    value: userState,
+    label: userState.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+  }));
+
   const chartTypeOptions = [
-    { value: 'bar', label: '📊 Bar Chart' },
-    { value: 'line', label: '📈 Line Chart' },
+    { value: 'bar', label: 'Bar Chart' },
+    { value: 'line', label: 'Line Chart' },
   ];
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white p-6 shadow-lg border border-gray-200 h-full">
+      <div className="flex flex-col  mb-6">
         <h2 className="text-xl font-bold text-gray-800">Visualization Controls</h2>
         <div className="text-sm text-gray-500">
           Showing {totalMetrics} {totalMetrics === 1 ? 'metric' : 'metrics'} • {totalProducts}{' '}
@@ -54,7 +59,7 @@ export const FilterControls: React.FC<Props> = ({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 gap-5">
         {/* Chart Type Selector */}
         <MultiSelectDropdown
           label="Chart Type"
@@ -101,6 +106,15 @@ export const FilterControls: React.FC<Props> = ({
           selectedValues={filters.selectedCpus}
           onChange={(values) => onFiltersChange({ ...filters, selectedCpus: values })}
           placeholder="Select CPU settings..."
+        />
+
+        {/* User State Selector */}
+        <MultiSelectDropdown
+          label="User State"
+          options={userStateOptions}
+          selectedValues={filters.selectedUserStates}
+          onChange={(values) => onFiltersChange({ ...filters, selectedUserStates: values })}
+          placeholder="Select user states..."
         />
       </div>
     </div>

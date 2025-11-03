@@ -79,14 +79,14 @@ export const MultiSelectDropdown: React.FC<DropdownProps> = ({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <label className="block text-sm font-medium text-gray-700 mb-2">{label}</label>
+      <label className="block text-xs font-medium text-gray-700 mb-2">{label}</label>
       <div className="relative">
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           className="w-full bg-white border border-gray-300 rounded-lg px-4 py-3 text-left shadow-md hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
         >
-          <span className="block truncate text-gray-900">{getDisplayText()}</span>
+          <span className="block truncate text-gray-900 text-xs">{getDisplayText()}</span>
           <span className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
             <svg
               className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
@@ -116,7 +116,7 @@ export const MultiSelectDropdown: React.FC<DropdownProps> = ({
                     onChange={handleToggleAll}
                     className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
-                  <span className="ml-3 text-sm font-medium text-gray-900">All {label}</span>
+                  <span className="ml-3 text-xs font-medium text-gray-900">All {label}</span>
                 </label>
               </div>
             )}
@@ -134,7 +134,7 @@ export const MultiSelectDropdown: React.FC<DropdownProps> = ({
                   onChange={() => handleToggleOption(option.value)}
                   className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
                 />
-                <span className="ml-3 text-sm text-gray-700">{option.label}</span>
+                <span className="ml-3 text-xs text-gray-700">{option.label}</span>
               </label>
             ))}
           </div>

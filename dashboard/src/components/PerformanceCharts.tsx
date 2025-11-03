@@ -17,6 +17,7 @@ export const PerformanceCharts: React.FC<Props> = ({ data }) => {
     selectedProducts: data.products.map((p) => p.product),
     selectedNetworks: Object.keys(data.execution_matrix.network),
     selectedCpus: Object.keys(data.execution_matrix.cpu),
+    selectedUserStates: Object.keys(data.execution_matrix.user_state),
     chartType: 'line',
   });
 
@@ -68,7 +69,8 @@ export const PerformanceCharts: React.FC<Props> = ({ data }) => {
           (point) =>
             filters.selectedProducts.includes(point.product) &&
             filters.selectedNetworks.includes(point.network) &&
-            filters.selectedCpus.includes(point.cpu)
+            filters.selectedCpus.includes(point.cpu) &&
+            filters.selectedUserStates.includes(point.userState)
         );
       }
     });
@@ -137,7 +139,7 @@ export const PerformanceCharts: React.FC<Props> = ({ data }) => {
   };
 
   return (
-    <div className="w-full space-y-8">
+    <div className="w-full grid grid-cols-[1fr,4fr] h-full">
       {/* Filter Controls */}
       <FilterControls
         data={data}
@@ -147,40 +149,45 @@ export const PerformanceCharts: React.FC<Props> = ({ data }) => {
         totalProducts={totalProducts}
       />
 
-      {/* Charts */}
-      <div className="space-y-8">
-        {filters.selectedMetrics.map((metricKey) => {
-          const metricInfo = data.metrics_metadata[metricKey as keyof typeof data.metrics_metadata];
-          const metricData = filteredData[metricKey] || [];
+      <div className="flex flex-col w-full gap-4 overflow-y-auto p-4 h-[calc(100vh-5.5rem)]">
+        {/* Charts */}
+        <div className="space-y-8">
+          {filters.selectedMetrics.map((metricKey) => {
+            const metricInfo =
+              data.metrics_metadata[metricKey as keyof typeof data.metrics_metadata];
+            const metricData = filteredData[metricKey] || [];
 
-          return (
-            <div
-              key={metricKey}
-              className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow"
-            >
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-xl font-semibold text-gray-800">{metricInfo.name}</h3>
-                  <div className="flex items-center space-x-2">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {metricData.length} {metricData.length === 1 ? 'data point' : 'data points'}
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      {filters.selectedProducts.length}{' '}
-                      {filters.selectedProducts.length === 1 ? 'product' : 'products'}
-                    </span>
+            return (
+              <div
+                key={metricKey}
+                className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow"
+              >
+                <div className="mb-6">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-xl font-semibold text-gray-800">{metricInfo.name}</h3>
+                    <div className="flex items-center space-x-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {metricData.length} {metricData.length === 1 ? 'data point' : 'data points'}
+                      </span>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        {filters.selectedProducts.length}{' '}
+                        {filters.selectedProducts.length === 1 ? 'product' : 'products'}
+                      </span>
+                    </div>
                   </div>
+                  <p className="text-gray-600 text-sm leading-relaxed">{metricInfo.description}</p>
                 </div>
-                <p className="text-gray-600 text-sm leading-relaxed">{metricInfo.description}</p>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  {renderChart(metricKey, metricData)}
+                </div>
               </div>
-              <div className="bg-gray-50 rounded-lg p-4">{renderChart(metricKey, metricData)}</div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
 
-      {/* Summary Statistics */}
-      <PerformanceSummary data={data} filteredData={filteredData} filters={filters} />
+        {/* Summary Statistics */}
+        <PerformanceSummary data={data} filteredData={filteredData} filters={filters} />
+      </div>
     </div>
   );
 };

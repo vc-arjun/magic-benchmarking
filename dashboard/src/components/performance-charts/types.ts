@@ -17,6 +17,7 @@ export interface FilterState {
   selectedProducts: string[];
   selectedNetworks: string[];
   selectedCpus: string[];
+  selectedUserStates: string[];
   chartType: 'bar' | 'line';
 }
 
