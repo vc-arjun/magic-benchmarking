@@ -1,10 +1,12 @@
 import { BenchmarkResults, ProductResults, MetricMetadata, InitialLoadMetrics } from './types/metrics';
 import { Config } from './types/config';
+import { NetworkResults } from './types/network';
 import { METRICS } from './constants/metrics';
 
 export class ResultsManager {
   private config: Config;
   private productResults: ProductResults[] = [];
+  private networkResults: NetworkResults[] = [];
 
   constructor(config: Config) {
     this.config = config;
@@ -18,6 +20,13 @@ export class ResultsManager {
   }
 
   /**
+   * Add network results from a product
+   */
+  public addNetworkResults(networkResults: NetworkResults): void {
+    this.networkResults.push(networkResults);
+  }
+
+  /**
    * Save consolidated results to JSON and CSV files
    */
   public async saveResults(filename?: string): Promise<void> {
@@ -27,7 +36,7 @@ export class ResultsManager {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const baseFilename = filename ? filename.replace(/\.[^/.]+$/, '') : `performance-results-consolidated-${timestamp}`;
 
-    const resultsDir = 'results';
+    const resultsDir = this.config.output.directory;
     if (!fs.existsSync(resultsDir)) {
       fs.mkdirSync(resultsDir, { recursive: true });
     }
@@ -44,6 +53,48 @@ export class ResultsManager {
     const csvContent = this.buildCSV(results);
     fs.writeFileSync(csvFilepath, csvContent);
     console.log(`Consolidated performance results saved to: ${csvFilepath}`);
+  }
+
+  /**
+   * Save network analysis results to separate JSON file
+   */
+  public async saveNetworkResults(filename?: string): Promise<void> {
+    const fs = await import('fs');
+    const path = await import('path');
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const baseFilename = filename ? filename.replace(/\.[^/.]+$/, '') : `network-analysis-${timestamp}`;
+
+    const resultsDir = this.config.output.directory;
+    if (!fs.existsSync(resultsDir)) {
+      fs.mkdirSync(resultsDir, { recursive: true });
+    }
+
+    const filepath = path.join(resultsDir, `${baseFilename}.json`);
+
+    const consolidatedNetworkResults = {
+      timestamp: new Date().toISOString(),
+      monitoringPhase: 'popup_to_interactive',
+      description: 'Network request analysis for Razorpay requests during MagicCheckout widget loading',
+      products: this.networkResults,
+    };
+
+    fs.writeFileSync(filepath, JSON.stringify(consolidatedNetworkResults, null, 2));
+    
+    console.log(`🔍 Network analysis results saved to: ${filepath}`);
+  }
+
+  /**
+   * Save all results (performance and network) in one method
+   */
+  public async saveAllResults(performanceFilename?: string, networkFilename?: string): Promise<void> {
+    // Save performance results
+    await this.saveResults(performanceFilename);
+    
+    // Save network results if any exist
+    if (this.networkResults.length > 0) {
+      await this.saveNetworkResults(networkFilename);
+    }
   }
 
   /**

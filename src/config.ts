@@ -37,13 +37,13 @@ export const CONFIG: Config = {
     },
   },
   execution: {
-    iterations: 2,
+    iterations: 1,
     timeout: 120000, // 2 minutes for slow network conditions
     headless: false,
     browsers: ['chromium'],
   },
   output: {
     formats: ['json', 'csv'],
-    directory: './results',
+    directory: './dashboard/public/results',
   },
 };
