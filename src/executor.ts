@@ -3,8 +3,7 @@ import { Config, ProductConfig } from './types/config';
 import { POM } from './types/pom';
 import { CONFIG } from './config';
 import { PerformanceMonitor } from './performance';
-import { ExecutionContext, BenchmarkResults, ContextResults, MetricMetadata, Measurement, InitialLoadMetrics } from './types/metrics';
-import { METRICS } from './constants/metrics';
+import { ExecutionContext, ContextResults, Measurement, InitialLoadMetrics, ProductResults } from './types/metrics';
 
 export class TestExecutor {
   private product: ProductConfig;
@@ -161,45 +160,18 @@ export class TestExecutor {
   }
 
   /**
-   * Save performance results to JSON file
+   * Get performance results for this product
    */
-  public async saveResults(filename?: string): Promise<void> {
-    const fs = await import('fs');
-    const path = await import('path');
-
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const defaultFilename = `performance-results-${this.product.name}-${timestamp}.json`;
-    const finalFilename = filename || defaultFilename;
-
-    const resultsDir = 'results';
-    if (!fs.existsSync(resultsDir)) {
-      fs.mkdirSync(resultsDir, { recursive: true });
-    }
-
-    const filepath = path.join(resultsDir, finalFilename);
-
-    const results = this.buildResults();
-
-    fs.writeFileSync(filepath, JSON.stringify(results, null, 2));
-    console.log(`Performance results saved to: ${filepath}`);
+  public getResults(): ProductResults {
+    return this.buildProductResults();
   }
 
   /**
-   * Build the final results structure
+   * Build product results for this executor
    */
-  private buildResults(): BenchmarkResults {
+  private buildProductResults(): ProductResults {
     const measurements = this.performanceMonitor.getAllMeasurements();
     const contextResults: ContextResults[] = [];
-
-    // Build metrics metadata once
-    const metricsMetadata: Record<InitialLoadMetrics, MetricMetadata> = {} as Record<InitialLoadMetrics, MetricMetadata>;
-    for (const metricName of Object.keys(METRICS.initial_load) as InitialLoadMetrics[]) {
-      const metricInfo = METRICS.initial_load[metricName];
-      metricsMetadata[metricName] = {
-        name: metricInfo.name,
-        description: metricInfo.description,
-      };
-    }
 
     // Group measurements by context
     const contextGroups = new Map<string, Map<string, Measurement[]>>();
@@ -239,16 +211,8 @@ export class TestExecutor {
 
     return {
       product: this.product.name,
-      timestamp: new Date().toISOString(),
-      execution_config: {
-        iterations: this.config.execution.iterations,
-        browsers: this.config.execution.browsers,
-        timeout: this.config.execution.timeout,
-        headless: this.config.execution.headless,
-      },
-      execution_matrix: this.config.execution_matrix,
-      metrics_metadata: metricsMetadata,
       results: contextResults,
     };
   }
+
 }

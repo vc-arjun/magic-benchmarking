@@ -31,11 +31,15 @@ export type ContextResults = {
   metrics: Record<InitialLoadMetrics, Measurement[]>;
 };
 
-export type BenchmarkResults = {
+export type ProductResults = {
   product: string;
+  results: ContextResults[];
+};
+
+export type BenchmarkResults = {
   timestamp: string;
   execution_config: ExecutionConfig;
   execution_matrix: ExecutionMatrixConfig;
   metrics_metadata: Record<InitialLoadMetrics, MetricMetadata>;
-  results: ContextResults[];
+  products: ProductResults[];
 };

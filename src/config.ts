@@ -37,13 +37,13 @@ export const CONFIG: Config = {
     },
   },
   execution: {
-    iterations: 5,
+    iterations: 1,
     timeout: 60000,
     headless: false,
     browsers: ['chromium'],
   },
   output: {
-    formats: ['json'],
+    formats: ['json', 'csv'],
     directory: './results',
   },
 };

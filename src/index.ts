@@ -1,9 +1,12 @@
 import { CONFIG } from './config';
 import { TestExecutor } from './executor';
+import { ResultsManager } from './results-manager';
 
 const main = async () => {
-  console.log('Starting Magic Checkout Performance Benchmarking');
+  console.log('Starting Performance Benchmarking');
   console.log('='.repeat(60));
+
+  const resultsManager = new ResultsManager(CONFIG);
 
   for (const product of CONFIG.products) {
     try {
@@ -11,8 +14,9 @@ const main = async () => {
       const testExecutor = new TestExecutor(product);
       await testExecutor.run();
 
-      // Save results before cleanup
-      await testExecutor.saveResults();
+      // Collect results
+      const productResults = testExecutor.getResults();
+      resultsManager.addProductResults(productResults);
 
       console.log(`Completed benchmarking performance of ${product.name}`);
     } catch (error) {
@@ -20,6 +24,9 @@ const main = async () => {
       process.exit(1);
     }
   }
+
+  // Save consolidated results
+  await resultsManager.saveResults();
 
   console.log('\n🎉 All performance benchmarking completed!');
 };
