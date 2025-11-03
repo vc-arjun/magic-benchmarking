@@ -18,9 +18,17 @@ export class TestExecutor {
   async run(): Promise<void> {
     try {
       console.log(`Starting execution for ${this.product.name}`);
-      for (let i = 0; i < this.config.execution.iterations; i++) {
-        console.log(`\n--- Starting iteration ${i + 1}/${this.config.execution.iterations} ---`);
-        await this.runIteration(i + 1);
+      for (let i = 0; i < this.config.execution.iterations + 1; i++) {
+        if (i === 0) {
+          console.log(`\n--- Starting warmup iteration ---`);
+          await this.runIteration(true);
+          console.log(`\n--- Warmup iteration completed successfully ---`);
+        } else {
+          console.log(`\n--- Starting iteration ${i} of ${this.config.execution.iterations} ---`);
+          await this.runIteration();
+          console.log(`\n--- Iteration ${i} completed successfully ---`);
+        }
+
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
       console.log(`\n🎉 Execution completed for ${this.product.name}`);
@@ -33,7 +41,7 @@ export class TestExecutor {
   /**
    * Run a single iteration with fresh browser process
    */
-  private async runIteration(iterationNumber: number): Promise<void> {
+  private async runIteration(skipMetrics: boolean = false): Promise<void> {
     let browser: Browser | null = null;
     let context: BrowserContext | null = null;
     let page: Page | null = null;
@@ -61,12 +69,7 @@ export class TestExecutor {
         throw new Error('Failed to create POM instance');
       }
       await pom.initialize();
-      await this.performInitialLoadBenchmark(pom, iterationNumber === 1);
-
-      console.log(`✅ Iteration ${iterationNumber} completed successfully`);
-    } catch (error) {
-      console.log(`❌ Iteration ${iterationNumber} failed: ${error}`);
-      throw error;
+      await this.performInitialLoadBenchmark(pom, skipMetrics);
     } finally {
       await page?.close();
       await context?.close();
@@ -74,7 +77,7 @@ export class TestExecutor {
     }
   }
 
-  private async performInitialLoadBenchmark(pom: POM,skipMetrics: boolean = false): Promise<void> {
+  private async performInitialLoadBenchmark(pom: POM, skipMetrics: boolean = false): Promise<void> {
     // Trigger checkout and capture performance metrics
     if (!this.performanceMonitor) {
       throw new Error('Performance monitor not initialized');
