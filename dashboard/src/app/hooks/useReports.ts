@@ -3,11 +3,12 @@ import { useState, useEffect, useCallback } from 'react';
 
 export const useReports = () => {
   const [reports, setReports] = useState<ReportFile[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refreshReports = useCallback(async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/reports');
       if (!response.ok) {
         throw await response.json();

@@ -18,8 +18,6 @@ export const ReportCard: React.FC<Props> = ({ report }) => (
     ) : (
       <Globe className="w-6 h-6 text-gray-600" />
     )}
-    <p className="text-md text-gray-900 font-medium">
-      {timeToReadable(report.content.timestamp)}
-    </p>
+    <p className="text-md text-gray-900 font-medium">{timeToReadable(report.content.timestamp)}</p>
   </Link>
 );
