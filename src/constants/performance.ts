@@ -1,4 +1,6 @@
 export const PERFORMANCE_MARKERS = {
-  TRIGGER_CHECKOUT_START: 'trigger_checkout_start',
-  TRIGGER_CHECKOUT_END: 'trigger_checkout_end',
+  CHECKOUT_START: 'checkout_start',
+  POPUP_APPEARS: 'popup_appears',
+  CONTENT_APPEARS: 'content_appears',
+  MAIN_THREAD_IDLE: 'main_thread_idle',
 };

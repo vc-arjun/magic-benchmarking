@@ -86,4 +86,42 @@ export class PerformanceMonitor {
       } as Metrics;
     }
   }
+
+  /**
+   * Wait for the main thread to be idle (no long tasks for a specified duration)
+   */
+  public async waitForMainThreadIdle(timeout: number = 5000): Promise<void> {
+    await this.page?.evaluate((timeoutMs) => {
+      return new Promise<void>((resolve) => {
+        let idleTimer: NodeJS.Timeout;
+        let observer: PerformanceObserver;
+        
+        const resetIdleTimer = () => {
+          clearTimeout(idleTimer);
+          idleTimer = setTimeout(() => {
+            observer?.disconnect();
+            resolve();
+          }, 100); // Consider idle after 100ms of no long tasks
+        };
+
+        // Start the idle timer
+        resetIdleTimer();
+
+        // Observe long tasks
+        if ('PerformanceObserver' in window) {
+          observer = new PerformanceObserver(() => {
+            resetIdleTimer();
+          });
+          observer.observe({ entryTypes: ['longtask'] });
+        }
+
+        // Fallback timeout
+        setTimeout(() => {
+          observer?.disconnect();
+          clearTimeout(idleTimer);
+          resolve();
+        }, timeoutMs);
+      });
+    }, timeout);
+  }
 }
