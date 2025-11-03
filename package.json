@@ -6,6 +6,9 @@
   "scripts": {
     "build": "tsc",
     "dev": "ts-node src/index.ts",
+    "web:dev": "cd dashboard && npm run dev && cd ..",
+    "web:build": "cd dashboard && npm run build && cd ..",
+    "web:start": "cd dashboard && npm run start && cd ..",
     "start": "npm run build && node dist/index.js",
     "debug": "npm run build && node --inspect dist/index.js",
     "clean": "rm -rf dist",
