@@ -1,0 +1,1197 @@
+{
+  "timestamp": "2025-11-04T14:58:15.917Z",
+  "execution_config": {
+    "iterations": 20,
+    "browsers": [
+      "chromium"
+    ],
+    "timeout": 120000,
+    "headless": true,
+    "retry": {
+      "max_attempts": 3,
+      "delay_between_retries": 3000,
+      "save_progress_on_failure": true
+    }
+  },
+  "execution_matrix": {
+    "network": {
+      "slow_4g": {
+        "download_throughput": 500000,
+        "upload_throughput": 500000,
+        "latency": 400,
+        "enabled": true
+      },
+      "no_throttling": {
+        "download_throughput": 0,
+        "upload_throughput": 0,
+        "latency": 0,
+        "enabled": true
+      }
+    },
+    "cpu": {
+      "no_throttling": {
+        "rate": 1,
+        "enabled": true
+      },
+      "4x_slowdown": {
+        "rate": 4,
+        "enabled": false
+      }
+    },
+    "user_state": {
+      "new_user": {
+        "is_logged_in": true,
+        "enabled": true
+      }
+    }
+  },
+  "metrics_metadata": {
+    "click_to_popup": {
+      "name": "Click to Popup",
+      "description": "The time from the user clicks the checkout button to the checkout popup appears"
+    },
+    "popup_to_content": {
+      "name": "Popup to Content",
+      "description": "The time from the checkout popup appears to the mobile number input field appears"
+    },
+    "click_to_content": {
+      "name": "Click to Content",
+      "description": "The time from the user clicks the checkout button to the mobile number input field appears on the popup"
+    },
+    "total_load_time": {
+      "name": "Total Load Time",
+      "description": "The time from the user clicks the checkout button till the last long task completes and the main thread is idle"
+    },
+    "content_to_interactive": {
+      "name": "Content to Interactive",
+      "description": "The time from the mobile number input field appears on the popup till the main thread is idle"
+    }
+  },
+  "products": [
+    {
+      "product": "MagicCheckout",
+      "results": [
+        {
+          "context": {
+            "network": "slow_4g",
+            "cpu": "no_throttling",
+            "user_state": "new_user",
+            "browser": "chromium"
+          },
+          "metrics": {
+            "click_to_popup": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 75.59999999776483,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 95.89999999850988,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 74.89999999850988,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 98.19999999925494,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 5,
+                  "value": 82.30000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 6,
+                  "value": 65.20000000298023,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 7,
+                  "value": 65.29999999701977,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 8,
+                  "value": 85.39999999850988,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 9,
+                  "value": 60.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 10,
+                  "value": 71.39999999850988,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 11,
+                  "value": 81.90000000223517,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 12,
+                  "value": 79.90000000223517,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 13,
+                  "value": 68.60000000149012,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 14,
+                  "value": 75.10000000149012,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 15,
+                  "value": 65.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 16,
+                  "value": 71.19999999925494,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 17,
+                  "value": 63.30000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 18,
+                  "value": 75.79999999701977,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 19,
+                  "value": 78.89999999850988,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 20,
+                  "value": 72.10000000149012,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 60.5,
+                "max": 98.19999999925494,
+                "mean": 75.35,
+                "count": 20
+              }
+            },
+            "popup_to_content": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 2870,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 3933.199999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 2869.39999999851,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 2868.60000000149,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 5,
+                  "value": 2870,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 6,
+                  "value": 2870.89999999851,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 7,
+                  "value": 2867.2000000029802,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 8,
+                  "value": 2872.400000002235,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 9,
+                  "value": 2870.199999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 10,
+                  "value": 2871.400000002235,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 11,
+                  "value": 2875.699999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 12,
+                  "value": 2875.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 13,
+                  "value": 2882.300000000745,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 14,
+                  "value": 2873.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 15,
+                  "value": 2873.10000000149,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 16,
+                  "value": 2876.699999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 17,
+                  "value": 2872.39999999851,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 18,
+                  "value": 2875.60000000149,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 19,
+                  "value": 2876.60000000149,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 20,
+                  "value": 2875.099999997765,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 2867.2000000029802,
+                "max": 3933.199999999255,
+                "mean": 2925.99,
+                "count": 20
+              }
+            },
+            "click_to_content": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 2945.599999997765,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 4029.099999997765,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 2944.2999999970198,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 2966.800000000745,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 5,
+                  "value": 2952.300000000745,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 6,
+                  "value": 2936.10000000149,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 7,
+                  "value": 2932.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 8,
+                  "value": 2957.800000000745,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 9,
+                  "value": 2930.699999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 10,
+                  "value": 2942.800000000745,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 11,
+                  "value": 2957.60000000149,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 12,
+                  "value": 2955.400000002235,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 13,
+                  "value": 2950.900000002235,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 14,
+                  "value": 2948.60000000149,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 15,
+                  "value": 2938.60000000149,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 16,
+                  "value": 2947.89999999851,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 17,
+                  "value": 2935.699999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 18,
+                  "value": 2951.39999999851,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 19,
+                  "value": 2955.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 20,
+                  "value": 2947.199999999255,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 2930.699999999255,
+                "max": 4029.099999997765,
+                "mean": 3001.34,
+                "count": 20
+              }
+            },
+            "total_load_time": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 3047.199999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 4131.599999997765,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 3046.099999997765,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 3068.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 5,
+                  "value": 3053.89999999851,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 6,
+                  "value": 3038.60000000149,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 7,
+                  "value": 3034.2999999970198,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 8,
+                  "value": 3059.89999999851,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 9,
+                  "value": 3031.800000000745,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 10,
+                  "value": 3043.60000000149,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 11,
+                  "value": 3059.2000000029802,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 12,
+                  "value": 3057.400000002235,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 13,
+                  "value": 3053.800000000745,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 14,
+                  "value": 3050.10000000149,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 15,
+                  "value": 3039.699999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 16,
+                  "value": 3049.199999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 17,
+                  "value": 3037.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 18,
+                  "value": 3053.2999999970198,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 19,
+                  "value": 3057.7999999970198,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 20,
+                  "value": 3049,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 3031.800000000745,
+                "max": 4131.599999997765,
+                "mean": 3103.12,
+                "count": 20
+              }
+            },
+            "content_to_interactive": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 101.60000000149012,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 102.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 101.80000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 101.69999999925494,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 5,
+                  "value": 101.59999999776483,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 6,
+                  "value": 102.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 7,
+                  "value": 101.79999999701977,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 8,
+                  "value": 102.09999999776483,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 9,
+                  "value": 101.10000000149012,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 10,
+                  "value": 100.80000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 11,
+                  "value": 101.60000000149012,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 12,
+                  "value": 102,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 13,
+                  "value": 102.89999999850988,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 14,
+                  "value": 101.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 15,
+                  "value": 101.09999999776483,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 16,
+                  "value": 101.30000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 17,
+                  "value": 101.80000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 18,
+                  "value": 101.89999999850988,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 19,
+                  "value": 102.29999999701977,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 20,
+                  "value": 101.80000000074506,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 100.80000000074506,
+                "max": 102.89999999850988,
+                "mean": 101.78,
+                "count": 20
+              }
+            }
+          }
+        },
+        {
+          "context": {
+            "network": "no_throttling",
+            "cpu": "no_throttling",
+            "user_state": "new_user",
+            "browser": "chromium"
+          },
+          "metrics": {
+            "click_to_popup": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 83.69999999925494,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 71.10000000149012,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 73.60000000149012,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 76.30000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 5,
+                  "value": 81.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 6,
+                  "value": 80.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 7,
+                  "value": 78,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 8,
+                  "value": 75.89999999850988,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 9,
+                  "value": 78.30000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 10,
+                  "value": 75.89999999850988,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 11,
+                  "value": 77.10000000149012,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 12,
+                  "value": 71.59999999776483,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 13,
+                  "value": 78.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 14,
+                  "value": 79.70000000298023,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 15,
+                  "value": 86.30000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 16,
+                  "value": 87.69999999925494,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 17,
+                  "value": 81.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 18,
+                  "value": 83.30000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 19,
+                  "value": 82.19999999925494,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 20,
+                  "value": 70.80000000074506,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 70.80000000074506,
+                "max": 87.69999999925494,
+                "mean": 78.68,
+                "count": 20
+              }
+            },
+            "popup_to_content": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 998.4000000022352,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 862.0999999977648,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 1044.0999999977648,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 866.8999999985099,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 5,
+                  "value": 862.2999999970198,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 6,
+                  "value": 899.1000000014901,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 7,
+                  "value": 928.9000000022352,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 8,
+                  "value": 918.1000000014901,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 9,
+                  "value": 875.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 10,
+                  "value": 1865.9000000022352,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 11,
+                  "value": 1867.800000000745,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 12,
+                  "value": 1866.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 13,
+                  "value": 862.5999999977648,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 14,
+                  "value": 867.5999999977648,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 15,
+                  "value": 961.6999999992549,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 16,
+                  "value": 953.1999999992549,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 17,
+                  "value": 916.6000000014901,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 18,
+                  "value": 861.5999999977648,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 19,
+                  "value": 949.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 20,
+                  "value": 979.3999999985099,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 861.5999999977648,
+                "max": 1867.800000000745,
+                "mean": 1060.39,
+                "count": 20
+              }
+            },
+            "click_to_content": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 1082.1000000014901,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 933.1999999992549,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 1117.699999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 943.1999999992549,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 5,
+                  "value": 943.7999999970198,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 6,
+                  "value": 979.6000000014901,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 7,
+                  "value": 1006.9000000022352,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 8,
+                  "value": 994,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 9,
+                  "value": 953.8000000007451,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 10,
+                  "value": 1941.800000000745,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 11,
+                  "value": 1944.9000000022352,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 12,
+                  "value": 1938.0999999977648,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 13,
+                  "value": 941.0999999977648,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 14,
+                  "value": 947.3000000007451,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 15,
+                  "value": 1048,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 16,
+                  "value": 1040.8999999985099,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 17,
+                  "value": 998.1000000014901,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 18,
+                  "value": 944.8999999985099,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 19,
+                  "value": 1031.699999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 20,
+                  "value": 1050.199999999255,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 933.1999999992549,
+                "max": 1944.9000000022352,
+                "mean": 1139.06,
+                "count": 20
+              }
+            },
+            "total_load_time": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 1191.9000000022352,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 1040.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 1222.199999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 1153.199999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 5,
+                  "value": 1051,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 6,
+                  "value": 1084.699999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 7,
+                  "value": 1115.800000000745,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 8,
+                  "value": 1098,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 9,
+                  "value": 1062.800000000745,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 10,
+                  "value": 2043.5999999977648,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 11,
+                  "value": 2048.800000000745,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 12,
+                  "value": 2039.8999999985099,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 13,
+                  "value": 1047.8999999985099,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 14,
+                  "value": 1047.9000000022352,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 15,
+                  "value": 1151.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 16,
+                  "value": 1143.7999999970198,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 17,
+                  "value": 1106.699999999255,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 18,
+                  "value": 1047,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 19,
+                  "value": 1137.3999999985099,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 20,
+                  "value": 1162.3999999985099,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 1040.5,
+                "max": 2048.800000000745,
+                "mean": 1249.85,
+                "count": 20
+              }
+            },
+            "content_to_interactive": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 109.80000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 107.30000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 104.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 210,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 5,
+                  "value": 107.20000000298023,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 6,
+                  "value": 105.09999999776483,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 7,
+                  "value": 108.89999999850988,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 8,
+                  "value": 104,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 9,
+                  "value": 109,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 10,
+                  "value": 101.79999999701977,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 11,
+                  "value": 103.89999999850988,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 12,
+                  "value": 101.80000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 13,
+                  "value": 106.80000000074506,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 14,
+                  "value": 100.60000000149012,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 15,
+                  "value": 103.5,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 16,
+                  "value": 102.89999999850988,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 17,
+                  "value": 108.59999999776483,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 18,
+                  "value": 102.10000000149012,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 19,
+                  "value": 105.69999999925494,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 20,
+                  "value": 112.19999999925494,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 100.60000000149012,
+                "max": 210,
+                "mean": 110.78,
+                "count": 20
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
