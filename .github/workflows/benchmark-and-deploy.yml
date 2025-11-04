@@ -1,0 +1,263 @@
+name: Magic Benchmarking & Dashboard Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_override:
+        description: 'Custom configuration JSON (optional)'
+        required: false
+        type: string
+      deployment_environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      benchmark_iterations:
+        description: 'Number of benchmark iterations'
+        required: false
+        default: '20'
+        type: string
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'dashboard/**'
+      - 'package*.json'
+      - 'Dockerfile'
+      - '.github/workflows/**'
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    outputs:
+      results-artifact: ${{ steps.upload-results.outputs.artifact-id }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          cd dashboard && npm ci && cd ..
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare benchmark configuration
+        run: |
+          if [ -n "${{ github.event.inputs.config_override }}" ]; then
+            echo "MAGIC_BENCHMARKING_CONFIG=${{ github.event.inputs.config_override }}" >> $GITHUB_ENV
+          else
+            # Use default configuration with custom iterations if provided
+            if [ -n "${{ github.event.inputs.benchmark_iterations }}" ]; then
+              export CUSTOM_ITERATIONS="${{ github.event.inputs.benchmark_iterations }}"
+              # Create a modified config with custom iterations
+              cat > custom_config.json << EOF
+          {
+            "products": [
+              {
+                "name": "MagicCheckout",
+                "entry_url": "https://razorpay.com/demopg3/",
+                "pom_file": "magic-checkout.ts",
+                "enabled": true
+              }
+            ],
+            "execution_matrix": {
+              "network": {
+                "slow_4g": {
+                  "download_throughput": 500000,
+                  "upload_throughput": 500000,
+                  "latency": 400,
+                  "enabled": true
+                },
+                "no_throttling": {
+                  "download_throughput": 0,
+                  "upload_throughput": 0,
+                  "latency": 0,
+                  "enabled": true
+                }
+              },
+              "cpu": {
+                "no_throttling": {
+                  "rate": 1,
+                  "enabled": true
+                }
+              },
+              "user_state": {
+                "new_user": {
+                  "is_logged_in": true,
+                  "enabled": true
+                }
+              }
+            },
+            "execution": {
+              "iterations": ${CUSTOM_ITERATIONS},
+              "timeout": 120000,
+              "headless": true,
+              "browsers": ["chromium"],
+              "retry": {
+                "max_attempts": 3,
+                "delay_between_retries": 3000,
+                "save_progress_on_failure": true
+              }
+            },
+            "output": {
+              "formats": ["json", "csv"],
+              "directory": "./dashboard/public/results"
+            }
+          }
+          EOF
+              echo "MAGIC_BENCHMARKING_CONFIG=$(cat custom_config.json | jq -c .)" >> $GITHUB_ENV
+            fi
+          fi
+
+      - name: Run benchmarking
+        run: |
+          echo "Starting Magic Checkout benchmarking..."
+          npm run build
+          npm start
+        env:
+          CI: true
+          NODE_ENV: production
+
+      - name: Verify results
+        run: |
+          echo "Checking generated results..."
+          ls -la dashboard/public/results/
+          if [ -z "$(ls -A dashboard/public/results/)" ]; then
+            echo "Error: No benchmark results generated!"
+            exit 1
+          fi
+          echo "Results generated successfully!"
+
+      - name: Upload benchmark results
+        id: upload-results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_number }}
+          path: dashboard/public/results/
+          retention-days: 30
+
+  build-and-deploy:
+    needs: benchmark
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          name: benchmark-results-${{ github.run_number }}
+          path: dashboard/public/results/
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dashboard dependencies
+        run: |
+          cd dashboard
+          npm ci
+
+      - name: Build Next.js dashboard
+        run: |
+          cd dashboard
+          npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: dashboard
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      # Deploy to GitHub Pages (for staging)
+      - name: Setup Pages (Staging)
+        if: github.event.inputs.deployment_environment == 'staging' || github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v4
+
+      - name: Upload to GitHub Pages (Staging)
+        if: github.event.inputs.deployment_environment == 'staging' || github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dashboard/out
+
+      - name: Deploy to GitHub Pages (Staging)
+        if: github.event.inputs.deployment_environment == 'staging' || github.ref == 'refs/heads/main'
+        id: deployment
+        uses: actions/deploy-pages@v4
+
+      # For production deployment, you can add additional steps here
+      # such as deploying to Vercel, Netlify, or your own infrastructure
+      - name: Deploy to Production
+        if: github.event.inputs.deployment_environment == 'production'
+        run: |
+          echo "Production deployment would go here"
+          echo "You can integrate with Vercel, AWS, or your preferred platform"
+          # Example for Vercel:
+          # npx vercel --prod --token ${{ secrets.VERCEL_TOKEN }}
+
+  notify:
+    needs: [benchmark, build-and-deploy]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Notify completion
+        run: |
+          if [ "${{ needs.benchmark.result }}" == "success" ] && [ "${{ needs.build-and-deploy.result }}" == "success" ]; then
+            echo "✅ Benchmarking and deployment completed successfully!"
+            echo "Dashboard URL: ${{ steps.deployment.outputs.page_url || 'Check your deployment platform' }}"
+          else
+            echo "❌ Workflow failed. Check the logs for details."
+            exit 1
+          fi

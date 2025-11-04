@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  # Benchmarking service
+  benchmarking:
+    build:
+      context: .
+      target: benchmarking
+    environment:
+      - NODE_ENV=production
+      - MAGIC_BENCHMARKING_CONFIG=${MAGIC_BENCHMARKING_CONFIG:-}
+    volumes:
+      # Mount results directory to persist data
+      - ./dashboard/public/results:/app/dashboard/public/results
+      # Mount source for development (optional)
+      - ./src:/app/src:ro
+    networks:
+      - magic-network
+    profiles:
+      - benchmarking
+
+  # Dashboard service
+  dashboard:
+    build:
+      context: .
+      target: dashboard
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount results directory to access benchmark data
+      - ./dashboard/public/results:/app/dashboard/public/results:ro
+    networks:
+      - magic-network
+    profiles:
+      - dashboard
+    depends_on:
+      - benchmarking
+
+  # Combined service for CI/CD (runs benchmarking then dashboard)
+  magic-benchmarking:
+    build:
+      context: .
+      target: benchmarking
+    environment:
+      - NODE_ENV=production
+      - MAGIC_BENCHMARKING_CONFIG=${MAGIC_BENCHMARKING_CONFIG:-}
+    volumes:
+      - results-data:/app/dashboard/public/results
+    networks:
+      - magic-network
+    command: >
+      sh -c "
+        echo 'Starting benchmarking process...' &&
+        npm start &&
+        echo 'Benchmarking completed. Results saved to /app/dashboard/public/results'
+      "
+
+  # Dashboard for combined workflow
+  dashboard-combined:
+    build:
+      context: .
+      target: dashboard
+    ports:
+      - "3000:3000"
+    volumes:
+      - results-data:/app/dashboard/public/results:ro
+    networks:
+      - magic-network
+    depends_on:
+      - magic-benchmarking
+    restart: unless-stopped
+
+volumes:
+  results-data:
+    driver: local
+
+networks:
+  magic-network:
+    driver: bridge

@@ -17,7 +17,15 @@
     "pretty:fix": "prettier --write src/**/*.ts dashboard/**/*.{ts,tsx,css,json}",
     "pretty": "prettier --check src/**/*.ts dashboard/**/*.{ts,tsx,css,json}",
     "validate": "npm run lint && npm run build",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "docker:build": "docker build --target benchmarking -t magic-benchmarking:latest .",
+    "docker:build:dashboard": "docker build --target dashboard -t magic-dashboard:latest .",
+    "docker:run": "docker-compose --profile benchmarking up benchmarking",
+    "docker:dashboard": "docker-compose --profile dashboard up dashboard",
+    "docker:full": "docker-compose up magic-benchmarking dashboard-combined",
+    "docker:test": "./scripts/test-docker.sh",
+    "setup": "./scripts/quick-start.sh",
+    "validate:workflows": "./scripts/validate-workflows.sh"
   },
   "keywords": [],
   "author": "arjun.vc@razorpay.com",
