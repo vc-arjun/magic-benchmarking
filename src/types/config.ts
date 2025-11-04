@@ -9,14 +9,17 @@ export type NetworkConfig = {
   download_throughput: number;
   upload_throughput: number;
   latency: number;
+  enabled: boolean;
 };
 
 export type CPUConfig = {
   rate: number;
+  enabled: boolean;
 };
 
 export type UserStateConfig = {
   is_logged_in: boolean;
+  enabled: boolean;
 };
 
 export type BrowserType = 'chromium' | 'firefox' | 'webkit';

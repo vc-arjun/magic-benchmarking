@@ -15,24 +15,29 @@ export const CONFIG: Config = {
         download_throughput: 500000, // 500kbps 
         upload_throughput: 500000, // 500kbps
         latency: 400, // 400ms
+        enabled: false,
       },
       no_throttling: {
         download_throughput: 0, // 0Mbps 
         upload_throughput: 0, // 0Mbps  
         latency: 0,
+        enabled: true,
       },
     },
     cpu: {
       no_throttling: {
         rate: 1,
+        enabled: true,
       },
       '4x_slowdown': {
         rate: 4,
+        enabled: false,
       },
     },
     user_state: {
       new_user: {
         is_logged_in: true,
+        enabled: true,
       },
     },
   },

@@ -65,7 +65,7 @@ export class NetworkMonitor {
    * Handle request event
    */
   private async handleRequest(request: Request): Promise<void> {
-    if (!this.isMonitoring || !this.isRazorpayRequest(request.url())) {
+    if (!this.isMonitoring || !this.shouldTrackRequest(request)) {
       return;
     }
 
@@ -140,11 +140,38 @@ export class NetworkMonitor {
   }
 
   /**
-   * Check if request is to Razorpay
+   * Check if request should be tracked
    */
-  private isRazorpayRequest(url: string): boolean {
+  private shouldTrackRequest(request: Request): boolean {
+    const url = request.url();
     const razorpayPattern = /(?:rzp|razorpay)/i;
-    return razorpayPattern.test(url);
+    
+    // First check if it's a Razorpay request
+    if (!razorpayPattern.test(url)) {
+      return false;
+    }
+    
+    // Exclude images
+    if (request.resourceType() === 'image') {
+      return false;
+    }
+    
+    // Exclude specific patterns we don't want to track
+    const excludePatterns = [
+      /analytics\.google\.com/i,
+      /lumberjack\.razorpay\.com/i,
+      /facebook\.com/i,
+      /\/magic\/analytics/i,
+    ];
+    
+    // Check if URL matches any exclude pattern
+    for (const pattern of excludePatterns) {
+      if (pattern.test(url)) {
+        return false;
+      }
+    }
+    
+    return true;
   }
 
   /**

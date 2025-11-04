@@ -1,0 +1,232 @@
+{
+  "timestamp": "2025-11-04T08:52:46.163Z",
+  "execution_config": {
+    "iterations": 4,
+    "browsers": [
+      "chromium"
+    ],
+    "timeout": 120000,
+    "headless": false
+  },
+  "execution_matrix": {
+    "network": {
+      "slow_4g": {
+        "download_throughput": 500000,
+        "upload_throughput": 500000,
+        "latency": 400,
+        "enabled": false
+      },
+      "no_throttling": {
+        "download_throughput": 0,
+        "upload_throughput": 0,
+        "latency": 0,
+        "enabled": true
+      }
+    },
+    "cpu": {
+      "no_throttling": {
+        "rate": 1,
+        "enabled": true
+      },
+      "4x_slowdown": {
+        "rate": 4,
+        "enabled": false
+      }
+    },
+    "user_state": {
+      "new_user": {
+        "is_logged_in": true,
+        "enabled": true
+      }
+    }
+  },
+  "metrics_metadata": {
+    "click_to_popup": {
+      "name": "Click to Popup",
+      "description": "The time from the user clicks the checkout button to the checkout popup appears"
+    },
+    "popup_to_content": {
+      "name": "Popup to Content",
+      "description": "The time from the checkout popup appears to the mobile number input field appears"
+    },
+    "click_to_content": {
+      "name": "Click to Content",
+      "description": "The time from the user clicks the checkout button to the mobile number input field appears on the popup"
+    },
+    "total_load_time": {
+      "name": "Total Load Time",
+      "description": "The time from the user clicks the checkout button till the last long task completes and the main thread is idle"
+    },
+    "content_to_interactive": {
+      "name": "Content to Interactive",
+      "description": "The time from the mobile number input field appears on the popup till the main thread is idle"
+    }
+  },
+  "products": [
+    {
+      "product": "MagicCheckout",
+      "results": [
+        {
+          "context": {
+            "network": "no_throttling",
+            "cpu": "no_throttling",
+            "user_state": "new_user",
+            "browser": "chromium"
+          },
+          "metrics": {
+            "click_to_popup": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 63.299999999813735,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 65.29999999981374,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 66,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 26.5,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 26.5,
+                "max": 66,
+                "mean": 55.27,
+                "count": 4
+              }
+            },
+            "popup_to_content": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 2889.9000000003725,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 1879,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 2885.2000000001863,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 1871.7999999998137,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 1871.7999999998137,
+                "max": 2889.9000000003725,
+                "mean": 2381.48,
+                "count": 4
+              }
+            },
+            "click_to_content": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 2953.2000000001863,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 1944.2999999998137,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 2951.2000000001863,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 1898.2999999998137,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 1898.2999999998137,
+                "max": 2953.2000000001863,
+                "mean": 2436.75,
+                "count": 4
+              }
+            },
+            "total_load_time": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 3056.7999999998137,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 2046.7000000001863,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 3057.2999999998137,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 2002.0999999996275,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 2002.0999999996275,
+                "max": 3057.2999999998137,
+                "mean": 2540.72,
+                "count": 4
+              }
+            },
+            "content_to_interactive": {
+              "measurements": [
+                {
+                  "iteration": 1,
+                  "value": 103.59999999962747,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 2,
+                  "value": 102.40000000037253,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 3,
+                  "value": 106.09999999962747,
+                  "unit": "ms"
+                },
+                {
+                  "iteration": 4,
+                  "value": 103.79999999981374,
+                  "unit": "ms"
+                }
+              ],
+              "statistics": {
+                "min": 102.40000000037253,
+                "max": 106.09999999962747,
+                "mean": 103.97,
+                "count": 4
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

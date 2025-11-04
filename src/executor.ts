@@ -62,8 +62,17 @@ export class TestExecutor {
     const combinations = [];
     
     for (const networkKey of Object.keys(this.config.execution_matrix.network)) {
+      const networkConfig = this.config.execution_matrix.network[networkKey];
+      if (!networkConfig.enabled) continue;
+      
       for (const cpuKey of Object.keys(this.config.execution_matrix.cpu)) {
+        const cpuConfig = this.config.execution_matrix.cpu[cpuKey];
+        if (!cpuConfig.enabled) continue;
+        
         for (const userStateKey of Object.keys(this.config.execution_matrix.user_state)) {
+          const userStateConfig = this.config.execution_matrix.user_state[userStateKey];
+          if (!userStateConfig.enabled) continue;
+          
           combinations.push({
             network: networkKey,
             cpu: cpuKey,

@@ -1,0 +1,6 @@
+Product,Network,CPU,User State,Browser,Metric Name,Metric Description,Iterations,Unit,Min,Max,Mean,Count
+MagicCheckout,no_throttling,no_throttling,new_user,chromium,Click to Popup,The time from the user clicks the checkout button to the checkout popup appears,63.3; 65.3; 66; 26.5,ms,26.5,66,55.27,4
+MagicCheckout,no_throttling,no_throttling,new_user,chromium,Popup to Content,The time from the checkout popup appears to the mobile number input field appears,2889.9; 1879; 2885.2; 1871.8,ms,1871.8,2889.9,2381.48,4
+MagicCheckout,no_throttling,no_throttling,new_user,chromium,Click to Content,The time from the user clicks the checkout button to the mobile number input field appears on the popup,2953.2; 1944.3; 2951.2; 1898.3,ms,1898.3,2953.2,2436.75,4
+MagicCheckout,no_throttling,no_throttling,new_user,chromium,Total Load Time,The time from the user clicks the checkout button till the last long task completes and the main thread is idle,3056.8; 2046.7; 3057.3; 2002.1,ms,2002.1,3057.3,2540.72,4
+MagicCheckout,no_throttling,no_throttling,new_user,chromium,Content to Interactive,The time from the mobile number input field appears on the popup till the main thread is idle,103.6; 102.4; 106.1; 103.8,ms,102.4,106.1,103.97,4
