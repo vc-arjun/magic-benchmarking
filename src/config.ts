@@ -47,7 +47,7 @@ function getDefaultConfig(): Config {
       },
     },
     execution: {
-      iterations: 20,
+      iterations: 2,
       timeout: 120000, // 2 minutes for slow network conditions
       headless: true,
       browsers: ['chromium'],
