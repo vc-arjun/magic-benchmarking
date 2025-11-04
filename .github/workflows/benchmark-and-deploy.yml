@@ -49,7 +49,7 @@ jobs:
           MAGIC_BENCHMARKING_CONFIG: ${{ github.event.inputs.config }}
 
       - name: Build dashboard
-        run: cd dashboard && npm run build
+        run: npm run web:build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

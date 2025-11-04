@@ -491,27 +491,3 @@ logger.updateConfig({
   filePath: './logs/debug.log',
 });
 ```
-
-## 📄 License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **Playwright Team** for the excellent automation framework
-- **Next.js Team** for the powerful React framework
-- **Recharts** for beautiful chart components
-- **TypeScript Team** for type safety and developer experience
-
-## 📞 Support
-
-For questions, issues, or contributions:
-
-1. **Check existing issues** in the repository
-2. **Create detailed bug reports** with reproduction steps
-3. **Join discussions** for feature requests
-4. **Contribute** improvements and fixes
-
----
-
-**Built with ❤️ for performance excellence**

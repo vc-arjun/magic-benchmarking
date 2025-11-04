@@ -9,9 +9,12 @@ export const useReports = () => {
   const refreshReports = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/reports');
+      // For static export, fetch from pre-generated JSON file
+      // Use relative path that works with GitHub Pages base path
+      const basePath = process.env.NODE_ENV === 'production' ? '/magic-benchmarking' : '';
+      const response = await fetch(`${basePath}/reports.json`);
       if (!response.ok) {
-        throw await response.json();
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       const data = await response.json();
       setReports(data);

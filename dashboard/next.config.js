@@ -15,6 +15,9 @@ const nextConfig = {
   // Enable static export for GitHub Pages
   output: 'export',
   trailingSlash: true,
+  // Configure for GitHub Pages deployment
+  basePath: process.env.NODE_ENV === 'production' ? '/magic-benchmarking' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/magic-benchmarking/' : '',
 };
 
 module.exports = nextConfig;

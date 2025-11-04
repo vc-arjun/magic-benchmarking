@@ -180,6 +180,8 @@ screenshots/
 dashboard/dist/
 dashboard/build/
 dashboard/out/
+dashboard/public/reports.json
+dashboard/public/results/
 
 # OS generated files
 .DS_Store
