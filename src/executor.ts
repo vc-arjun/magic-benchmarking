@@ -12,6 +12,7 @@ export class TestExecutor {
   private config: Config;
   private performanceMonitor: PerformanceMonitor;
   private networkMonitor: NetworkMonitor;
+  private failedIterations: Array<{combination: {network: string, cpu: string, user_state: string}, iteration: number, error: string}> = [];
 
   constructor(product: ProductConfig) {
     this.product = product;
@@ -33,25 +34,54 @@ export class TestExecutor {
       for (const combination of executionCombinations) {
         console.log(`\n--- Testing combination: ${JSON.stringify(combination, null, 2)} ---`);
         
-        // Warmup iteration
+        // Warmup iteration with retry logic
         console.log(`\n--- Starting warmup iteration ---`);
-        await this.runIteration(combination, 0, true);
+        await this.runIterationWithRetry(combination, 0, true);
         console.log(`\n--- Warmup iteration completed successfully ---`);
         
-        // Actual iterations
+        // Actual iterations with retry logic
         for (let i = 1; i <= this.config.execution.iterations; i++) {
           console.log(`\n--- Starting iteration ${i} of ${this.config.execution.iterations} ---`);
-          await this.runIteration(combination, i);
+          await this.runIterationWithRetry(combination, i);
           console.log(`\n--- Iteration ${i} completed successfully ---`);
           
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
       
+      // Print execution summary
+      this.printExecutionSummary();
+      
       console.log(`\n🎉 Execution completed for ${this.product.name}`);
     } catch (error) {
       console.log(`Failed to execute for ${this.product.name}: ${error}`);
       throw error;
+    }
+  }
+
+  /**
+   * Print a summary of the execution including failed iterations
+   */
+  private printExecutionSummary(): void {
+    const executionCombinations = this.generateExecutionCombinations();
+    const totalIterations = executionCombinations.length * this.config.execution.iterations;
+    const failedCount = this.failedIterations.length;
+    const successCount = totalIterations - failedCount;
+    
+    console.log(`\n📊 Execution Summary for ${this.product.name}:`);
+    console.log(`   Total iterations: ${totalIterations}`);
+    console.log(`   Successful: ${successCount} ✅`);
+    console.log(`   Failed: ${failedCount} ❌`);
+    
+    if (failedCount > 0) {
+      console.log(`\n❌ Failed iterations:`);
+      for (const failure of this.failedIterations) {
+        console.log(`   - Iteration ${failure.iteration} (${JSON.stringify(failure.combination)}): ${failure.error}`);
+      }
+      
+      if (this.config.execution.retry.save_progress_on_failure) {
+        console.log(`\n💾 Progress was saved for partial results during failures`);
+      }
     }
   }
 
@@ -83,6 +113,97 @@ export class TestExecutor {
     }
     
     return combinations;
+  }
+
+  /**
+   * Run a single iteration with retry logic
+   */
+  private async runIterationWithRetry(
+    combination: {network: string, cpu: string, user_state: string}, 
+    iteration: number,
+    skipMetrics: boolean = false
+  ): Promise<void> {
+    const retryConfig = this.config.execution.retry;
+    const maxAttempts = retryConfig.max_attempts;
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        if (attempt > 1) {
+          console.log(`🔄 Retry attempt ${attempt - 1}/${maxAttempts - 1} for iteration ${iteration}`);
+          // Add delay between retries to allow system to stabilize
+          await new Promise((resolve) => setTimeout(resolve, retryConfig.delay_between_retries));
+        }
+        
+        await this.runIteration(combination, iteration, skipMetrics);
+        
+        if (attempt > 1) {
+          console.log(`✅ Retry successful on attempt ${attempt - 1} for iteration ${iteration}`);
+        }
+        
+        return; // Success, exit retry loop
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+        console.log(`❌ Attempt ${attempt} failed for iteration ${iteration}: ${lastError.message}`);
+        
+        if (attempt === maxAttempts) {
+          console.log(`💥 All ${maxAttempts} attempts failed for iteration ${iteration}. Skipping this iteration.`);
+          
+          // Track failed iteration
+          this.failedIterations.push({
+            combination,
+            iteration,
+            error: lastError.message
+          });
+          
+          // Save current progress if configured to do so
+          if (retryConfig.save_progress_on_failure) {
+            console.log(`📊 Saving current progress before continuing...`);
+            await this.saveCurrentProgress();
+          }
+          
+          // Log the final error but don't throw - continue with next iteration
+          console.log(`⚠️  Final error for iteration ${iteration}: ${lastError.message}`);
+          return;
+        }
+      }
+    }
+  }
+
+  /**
+   * Save current progress to avoid losing all data
+   */
+  private async saveCurrentProgress(): Promise<void> {
+    try {
+      const { ResultsManager } = await import('./results-manager');
+      const resultsManager = new ResultsManager(this.config);
+      
+      // Get current results
+      const productResults = this.getResults();
+      const networkResults = this.getNetworkResults();
+      
+      // Only save if we have some results
+      if (productResults.results.length > 0) {
+        resultsManager.addProductResults(productResults);
+        
+        if (networkResults.results && networkResults.results.length > 0) {
+          resultsManager.addNetworkResults(networkResults);
+        }
+        
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        await resultsManager.saveAllResults(
+          `partial-progress-${this.product.name}-${timestamp}`,
+          `partial-network-${this.product.name}-${timestamp}`
+        );
+        
+        console.log(`💾 Progress saved successfully`);
+      } else {
+        console.log(`📝 No results to save yet`);
+      }
+    } catch (saveError) {
+      console.log(`⚠️  Failed to save progress: ${saveError}`);
+      // Don't throw here - we want to continue execution
+    }
   }
 
   /**
@@ -195,6 +316,20 @@ export class TestExecutor {
       monitoring_phase: 'popup_to_interactive',
       results: this.networkMonitor.getNetworkResults(),
     };
+  }
+
+  /**
+   * Get information about failed iterations
+   */
+  public getFailedIterations(): Array<{combination: {network: string, cpu: string, user_state: string}, iteration: number, error: string}> {
+    return this.failedIterations;
+  }
+
+  /**
+   * Check if there were any failed iterations
+   */
+  public hasFailures(): boolean {
+    return this.failedIterations.length > 0;
   }
 
   /**

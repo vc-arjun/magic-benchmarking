@@ -15,7 +15,7 @@ export const CONFIG: Config = {
         download_throughput: 500000, // 500kbps 
         upload_throughput: 500000, // 500kbps
         latency: 400, // 400ms
-        enabled: false,
+        enabled: true,
       },
       no_throttling: {
         download_throughput: 0, // 0Mbps 
@@ -42,10 +42,15 @@ export const CONFIG: Config = {
     },
   },
   execution: {
-    iterations: 4,
+    iterations: 20,
     timeout: 120000, // 2 minutes for slow network conditions
     headless: false,
     browsers: ['chromium'],
+    retry: {
+      max_attempts: 3, // Total attempts (1 initial + 2 retries)
+      delay_between_retries: 3000, // 3 seconds delay between retries
+      save_progress_on_failure: true, // Save progress when all retries fail
+    },
   },
   output: {
     formats: ['json', 'csv'],

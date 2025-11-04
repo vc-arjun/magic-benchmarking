@@ -22,9 +22,25 @@ const main = async () => {
       const networkResults = testExecutor.getNetworkResults();
       resultsManager.addNetworkResults(networkResults);
 
-      console.log(`Completed benchmarking performance of ${product.name}`);
+      // Check for failures and log them
+      if (testExecutor.hasFailures()) {
+        const failures = testExecutor.getFailedIterations();
+        console.log(`⚠️  Completed benchmarking with ${failures.length} failed iterations for ${product.name}`);
+      } else {
+        console.log(`✅ Completed benchmarking performance of ${product.name} - all iterations successful`);
+      }
     } catch (error) {
       console.error(`Failed to benchmark performance of ${product.name}: ${error}`);
+      
+      // Save any partial results before exiting
+      console.log(`💾 Attempting to save any partial results before exiting...`);
+      try {
+        await resultsManager.saveAllResults();
+        console.log(`✅ Partial results saved successfully`);
+      } catch (saveError) {
+        console.error(`❌ Failed to save partial results: ${saveError}`);
+      }
+      
       process.exit(1);
     }
   }
