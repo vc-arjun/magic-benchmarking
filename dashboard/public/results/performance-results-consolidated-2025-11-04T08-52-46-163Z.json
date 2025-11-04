@@ -2,9 +2,7 @@
   "timestamp": "2025-11-04T08:52:46.163Z",
   "execution_config": {
     "iterations": 4,
-    "browsers": [
-      "chromium"
-    ],
+    "browsers": ["chromium"],
     "timeout": 120000,
     "headless": false
   },

@@ -2,6 +2,7 @@ import React from 'react';
 import { NetworkResults } from '@/types/reports';
 import { MultiSelectDropdown } from '../MultiSelectDropdown';
 import { NetworkFilterState } from './types';
+import { formatNetworkContextLabel } from './utils';
 
 interface Props {
   data: NetworkResults;
@@ -19,31 +20,24 @@ export const NetworkFilterControls: React.FC<Props> = ({
   totalProducts,
 }) => {
   // Extract unique values from data
-  const requestTypes = [...new Set(
-    data.results.flatMap(result => 
-      result.requests.map(req => req.type)
-    )
-  )];
+  const requestTypes = [
+    ...new Set(data.results.flatMap((result) => result.requests.map((req) => req.type))),
+  ];
 
   const products = [data.product];
 
-  const networks = [...new Set(
-    data.results.map(result => result.context.network)
-  )];
+  const networks = [...new Set(data.results.map((result) => result.context.network))];
 
-  const cpus = [...new Set(
-    data.results.map(result => result.context.cpu)
-  )];
+  const cpus = [...new Set(data.results.map((result) => result.context.cpu))];
 
-  const userStates = [...new Set(
-    data.results.map(result => result.context.user_state)
-  )];
+  const userStates = [...new Set(data.results.map((result) => result.context.user_state))];
 
-  const urls = [...new Set(
-    data.results.flatMap(result => 
-      result.requests.map(req => req.url)
-    )
-  )].slice(0, 20); // Limit to first 20 URLs for UI performance
+  // Get available execution contexts
+  const availableContexts = [
+    ...new Set(data.results.map(result => 
+      `${result.context.network}_${result.context.cpu}_${result.context.user_state}`
+    ))
+  ];
 
   // Prepare dropdown options
   const requestTypeOptions = requestTypes.map((type) => ({
@@ -71,25 +65,12 @@ export const NetworkFilterControls: React.FC<Props> = ({
     label: userState.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
   }));
 
-  const urlOptions = urls.map((url) => {
-    const urlObj = new URL(url);
-    const shortUrl = `${urlObj.hostname}${urlObj.pathname}`;
-    return {
-      value: url,
-      label: shortUrl.length > 40 ? `${shortUrl.substring(0, 37)}...` : shortUrl,
-    };
-  });
+  const contextOptions = availableContexts.map((contextKey) => ({
+    value: contextKey,
+    label: contextKey.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+    fullLabel: formatNetworkContextLabel(contextKey),
+  }));
 
-  const chartTypeOptions = [
-    { value: 'bar', label: 'Bar Chart' },
-    { value: 'line', label: 'Line Chart' },
-  ];
-
-  const viewTypeOptions = [
-    { value: 'latency', label: 'Latency (ms)' },
-    { value: 'size', label: 'Size (bytes)' },
-    { value: 'status', label: 'Status Codes' },
-  ];
 
   return (
     <div className="bg-white p-6 shadow-lg border border-gray-200 h-full">
@@ -102,36 +83,29 @@ export const NetworkFilterControls: React.FC<Props> = ({
       </div>
 
       <div className="grid grid-cols-1 gap-5">
-        {/* Chart Type Selector */}
-        <MultiSelectDropdown
-          label="Chart Type"
-          options={chartTypeOptions}
-          selectedValues={[filters.chartType]}
-          onChange={(values) =>
-            onFiltersChange({ ...filters, chartType: values[0] as 'bar' | 'line' })
-          }
-          placeholder="Select chart type..."
-          multiSelect={false}
-        />
-
-        {/* View Type Selector */}
-        <MultiSelectDropdown
-          label="View Type"
-          options={viewTypeOptions}
-          selectedValues={[filters.viewType]}
-          onChange={(values) =>
-            onFiltersChange({ ...filters, viewType: values[0] as 'latency' | 'size' | 'status' })
-          }
-          placeholder="Select view type..."
-          multiSelect={false}
-        />
+        {/* Execution Context Selector */}
+        <div className="border-b border-gray-200 pb-4 mb-2">
+          <MultiSelectDropdown
+            label="Execution Context"
+            options={contextOptions}
+            selectedValues={[filters.selectedContext]}
+            onChange={(values) => onFiltersChange({ ...filters, selectedContext: values[0] || '' })}
+            placeholder="Select execution context..."
+            multiSelect={false}
+          />
+          <div className="mt-2 text-xs text-gray-600">
+            <strong>Current:</strong> {contextOptions.find(c => c.value === filters.selectedContext)?.fullLabel || 'None selected'}
+          </div>
+        </div>
 
         {/* Request Type Selector */}
         <MultiSelectDropdown
           label="Request Types"
           options={requestTypeOptions}
           selectedValues={filters.selectedRequestTypes}
-          onChange={(values) => onFiltersChange({ ...filters, selectedRequestTypes: values as any })}
+          onChange={(values) =>
+            onFiltersChange({ ...filters, selectedRequestTypes: values as any })
+          }
           placeholder="Select request types..."
         />
 
@@ -162,20 +136,6 @@ export const NetworkFilterControls: React.FC<Props> = ({
           placeholder="Select user states..."
         />
 
-        {/* URL Selector for Comparison */}
-        <div className="border-t border-gray-200 pt-4 mt-4">
-          <div className="mb-2">
-            <h4 className="text-sm font-semibold text-gray-800">Performance Comparison</h4>
-            <p className="text-xs text-gray-600">Select specific requests to compare</p>
-          </div>
-          <MultiSelectDropdown
-            label="Select URLs to Compare"
-            options={urlOptions}
-            selectedValues={filters.selectedUrls}
-            onChange={(values) => onFiltersChange({ ...filters, selectedUrls: values })}
-            placeholder="Choose requests for comparison..."
-          />
-        </div>
       </div>
     </div>
   );

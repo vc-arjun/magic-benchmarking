@@ -31,9 +31,7 @@ export interface NetworkFilterState {
   selectedNetworks: string[];
   selectedCpus: string[];
   selectedUserStates: string[];
-  selectedUrls: string[];
-  chartType: 'bar' | 'line';
-  viewType: 'latency' | 'size' | 'status';
+  selectedContext: string;
 }
 
 export interface WaterfallDataPoint {

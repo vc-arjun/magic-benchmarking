@@ -12,7 +12,12 @@ import {
   ResponsiveContainer,
   ErrorBar,
 } from 'recharts';
-import { RequestGroupData, NetworkContextLegendItem, NETWORK_CHART_COLORS, NetworkChartDataPoint } from './types';
+import {
+  RequestGroupData,
+  NetworkContextLegendItem,
+  NETWORK_CHART_COLORS,
+  NetworkChartDataPoint,
+} from './types';
 import { formatDuration, formatBytes, getUniqueRequests } from './utils';
 import { ContextLegend } from '../ContextLegend';
 
@@ -37,14 +42,15 @@ export const NetworkLatencyChart: React.FC<Props> = ({
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const dataPoint = payload[0].payload;
-      
+
       return (
         <div className="bg-white p-4 border border-gray-300 rounded-lg shadow-lg max-w-md">
           <div className="text-xs text-gray-500 whitespace-pre-line mb-3">
-            <strong>Execution Context:</strong><br />
+            <strong>Execution Context:</strong>
+            <br />
             {dataPoint.contextLabel}
           </div>
-          
+
           {payload.map((entry: any, index: number) => {
             const requestKey = entry.dataKey;
             const value = entry.value;
@@ -55,13 +61,13 @@ export const NetworkLatencyChart: React.FC<Props> = ({
             const method = dataPoint[`${requestKey}_method`];
             const type = dataPoint[`${requestKey}_type`];
             const measurements = dataPoint[`${requestKey}_measurements`] || [];
-            
+
             if (!url) return null;
-            
+
             let formattedValue = '';
             let formattedMin = '';
             let formattedMax = '';
-            
+
             if (viewType === 'latency') {
               formattedValue = formatDuration(value);
               formattedMin = formatDuration(minValue);
@@ -77,41 +83,56 @@ export const NetworkLatencyChart: React.FC<Props> = ({
             }
 
             // Calculate average size from measurements
-            const avgSize = measurements.length > 0 
-              ? formatBytes(measurements.reduce((sum: number, m: any) => sum + m.size, 0) / measurements.length)
-              : 'N/A';
-            
+            const avgSize =
+              measurements.length > 0
+                ? formatBytes(
+                    measurements.reduce((sum: number, m: any) => sum + m.size, 0) /
+                      measurements.length
+                  )
+                : 'N/A';
+
             return (
               <div key={index} className="mb-4 p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
-                  <div
-                    className="w-3 h-3 rounded"
-                    style={{ backgroundColor: entry.color }}
-                  />
+                  <div className="w-3 h-3 rounded" style={{ backgroundColor: entry.color }} />
                   <span className="font-medium text-gray-700 text-sm">
                     {method} • {type.toUpperCase()}
                   </span>
                 </div>
-                
+
                 <div className="text-xs text-gray-600 mb-2 break-all" title={url}>
                   <strong>URL:</strong> {url}
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <strong>Mean {viewType === 'latency' ? 'Duration' : viewType === 'size' ? 'Size' : 'Status'}:</strong><br />
+                    <strong>
+                      Mean{' '}
+                      {viewType === 'latency'
+                        ? 'Duration'
+                        : viewType === 'size'
+                          ? 'Size'
+                          : 'Status'}
+                      :
+                    </strong>
+                    <br />
                     <span className="font-semibold text-blue-600">{formattedValue}</span>
                   </div>
                   <div>
-                    <strong>Range:</strong><br />
-                    <span className="text-gray-600">{formattedMin} - {formattedMax}</span>
+                    <strong>Range:</strong>
+                    <br />
+                    <span className="text-gray-600">
+                      {formattedMin} - {formattedMax}
+                    </span>
                   </div>
                   <div>
-                    <strong>Iterations:</strong><br />
+                    <strong>Iterations:</strong>
+                    <br />
                     <span className="text-gray-600">{count}</span>
                   </div>
                   <div>
-                    <strong>Avg Size:</strong><br />
+                    <strong>Avg Size:</strong>
+                    <br />
                     <span className="text-gray-600">{avgSize}</span>
                   </div>
                 </div>
@@ -131,7 +152,7 @@ export const NetworkLatencyChart: React.FC<Props> = ({
         return (dataPoint: RequestGroupData) => {
           const measurements = dataPoint[`${requestKey}_measurements`] as any[];
           if (!measurements || measurements.length === 0) return 0;
-          const sizes = measurements.map(m => m.size);
+          const sizes = measurements.map((m) => m.size);
           return sizes.reduce((a, b) => a + b, 0) / sizes.length;
         };
       case 'status':
@@ -140,12 +161,14 @@ export const NetworkLatencyChart: React.FC<Props> = ({
           if (!measurements || measurements.length === 0) return 0;
           // Return most common status code
           const statusCounts: Record<number, number> = {};
-          measurements.forEach(m => {
+          measurements.forEach((m) => {
             statusCounts[m.status] = (statusCounts[m.status] || 0) + 1;
           });
-          return parseInt(Object.keys(statusCounts).reduce((a, b) => 
-            statusCounts[parseInt(a)] > statusCounts[parseInt(b)] ? a : b
-          ));
+          return parseInt(
+            Object.keys(statusCounts).reduce((a, b) =>
+              statusCounts[parseInt(a)] > statusCounts[parseInt(b)] ? a : b
+            )
+          );
         };
       default: // latency
         return (dataPoint: RequestGroupData) => dataPoint[requestKey] as number;
@@ -153,17 +176,17 @@ export const NetworkLatencyChart: React.FC<Props> = ({
   };
 
   // Prepare chart data with proper value accessors
-  const chartData = data.map(dataPoint => {
+  const chartData = data.map((dataPoint) => {
     const result: any = {
       ...dataPoint,
       shortLabel: `${dataPoint.contextIndex}`,
     };
-    
-    uniqueRequests.forEach(request => {
+
+    uniqueRequests.forEach((request) => {
       const valueAccessor = getValueAccessor(request.key);
       result[request.key] = valueAccessor(dataPoint);
     });
-    
+
     return result;
   });
 
@@ -216,15 +239,11 @@ export const NetworkLatencyChart: React.FC<Props> = ({
             label={{ value: getYAxisLabel(), angle: -90, position: 'insideLeft' }}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Legend 
+          <Legend
             wrapperStyle={{ fontSize: '12px' }}
             formatter={(value: string) => {
-              const request = uniqueRequests.find(r => r.key === value);
-              return request ? (
-                <span title={request.url}>
-                  {request.shortUrl}
-                </span>
-              ) : value;
+              const request = uniqueRequests.find((r) => r.key === value);
+              return request ? <span title={request.url}>{request.shortUrl}</span> : value;
             }}
           />
           {uniqueRequests.map((request, index) => (
@@ -259,15 +278,11 @@ export const NetworkLatencyChart: React.FC<Props> = ({
           label={{ value: getYAxisLabel(), angle: -90, position: 'insideLeft' }}
         />
         <Tooltip content={<CustomTooltip />} />
-        <Legend 
+        <Legend
           wrapperStyle={{ fontSize: '12px' }}
           formatter={(value: string) => {
-            const request = uniqueRequests.find(r => r.key === value);
-            return request ? (
-              <span title={request.url}>
-                {request.shortUrl}
-              </span>
-            ) : value;
+            const request = uniqueRequests.find((r) => r.key === value);
+            return request ? <span title={request.url}>{request.shortUrl}</span> : value;
           }}
         />
         {uniqueRequests.map((request, index) => (
@@ -278,12 +293,7 @@ export const NetworkLatencyChart: React.FC<Props> = ({
             radius={[2, 2, 0, 0]}
             name={request.shortUrl}
           >
-            <ErrorBar
-              dataKey={`${request.key}_min`}
-              width={4}
-              stroke="#666"
-              strokeWidth={1}
-            />
+            <ErrorBar dataKey={`${request.key}_min`} width={4} stroke="#666" strokeWidth={1} />
           </Bar>
         ))}
       </BarChart>
@@ -298,7 +308,7 @@ export const NetworkLatencyChart: React.FC<Props> = ({
             {renderChart()}
           </ResponsiveContainer>
         </div>
-        
+
         {contextLegend.length > 1 && (
           <div className="w-80">
             <ContextLegend items={contextLegend} />

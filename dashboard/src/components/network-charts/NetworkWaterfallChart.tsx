@@ -1,129 +1,49 @@
 import React, { useState, useMemo } from 'react';
 import { WaterfallDataPoint, NetworkChartDataPoint } from './types';
-import { formatDuration, formatBytes, formatNetworkContextLabel } from './utils';
-import { MultiSelectDropdown } from '../MultiSelectDropdown';
+import { formatDuration, formatBytes } from './utils';
 
 interface Props {
   data: WaterfallDataPoint[];
   availableIterations: number[];
   requestData: NetworkChartDataPoint[];
+  selectedContext: string;
 }
 
-export const NetworkWaterfallChart: React.FC<Props> = ({ data, availableIterations, requestData }) => {
+export const NetworkWaterfallChart: React.FC<Props> = ({
+  data,
+  availableIterations,
+  requestData,
+  selectedContext,
+}) => {
   const [hoveredRequest, setHoveredRequest] = useState<string | null>(null);
-  
-  // Get available execution contexts
-  const availableContexts = useMemo(() => {
-    const contexts = [...new Set(requestData.map(req => req.contextKey))];
-    return contexts.map(contextKey => ({
-      value: contextKey,
-      label: contextKey.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-      fullLabel: formatNetworkContextLabel(contextKey),
-    }));
-  }, [requestData]);
 
-  const [selectedContext, setSelectedContext] = useState<string>(availableContexts[0]?.value || '');
-
-  // Filter data by selected context and recalculate waterfall data
-  const contextFilteredData = useMemo(() => {
-    if (!selectedContext) return data;
-    
-    // Get requests for the selected context
-    const contextRequests = requestData.filter(req => req.contextKey === selectedContext);
-    
-    // Transform context-specific requests into waterfall data
-    const waterfallData: WaterfallDataPoint[] = [];
-    
-    contextRequests.forEach((request, index) => {
-      const measurements = request.measurements;
-      if (measurements.length === 0) return;
-      
-      const meanStartTime = measurements.reduce((sum, m) => sum + m.startTime, 0) / measurements.length;
-      const meanDuration = request.mean;
-      const meanEndTime = meanStartTime + meanDuration;
-      const meanSize = measurements.reduce((sum, m) => sum + m.size, 0) / measurements.length;
-      
-      // Get most common status code
-      const statusCounts: Record<number, number> = {};
-      measurements.forEach(m => {
-        statusCounts[m.status] = (statusCounts[m.status] || 0) + 1;
-      });
-      const mostCommonStatus = parseInt(
-        Object.keys(statusCounts).reduce((a, b) => 
-          statusCounts[parseInt(a)] > statusCounts[parseInt(b)] ? a : b
-        )
-      );
-
-      const urlObj = new URL(request.url);
-      const shortUrl = `${urlObj.hostname}${urlObj.pathname}`;
-
-      waterfallData.push({
-        id: `${index}`,
-        url: request.url,
-        shortUrl: shortUrl.length > 40 ? `${shortUrl.substring(0, 37)}...` : shortUrl,
-        type: request.type,
-        method: request.method,
-        startTime: meanStartTime,
-        duration: meanDuration,
-        endTime: meanEndTime,
-        status: mostCommonStatus,
-        size: meanSize,
-        iteration: 0,
-        level: 0,
-        color: (() => {
-          const colors: Record<string, string> = {
-            document: '#8884d8',
-            script: '#82ca9d',
-            stylesheet: '#ffc658',
-            image: '#ff7300',
-            font: '#00ff00',
-            xhr: '#ff00ff',
-            fetch: '#00ffff',
-            other: '#ff0000',
-          };
-          return colors[request.type] || '#666666';
-        })(),
-      });
-    });
-    
-    // Sort by start time for waterfall display
-    return waterfallData.sort((a, b) => a.startTime - b.startTime);
-  }, [data, selectedContext, requestData]);
-
-  // Use context-filtered data
-  const iterationData = contextFilteredData;
+  // Since data is already filtered by context globally, we can use it directly
+  const iterationData = data;
 
   // Handle empty data case
   if (iterationData.length === 0) {
     return (
       <div className="w-full">
-        {/* Controls */}
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div className="flex items-start gap-4">
-            {/* Context Selector */}
-            <div className="min-w-64">
-              <MultiSelectDropdown
-                label="Execution Context"
-                options={availableContexts}
-                selectedValues={[selectedContext]}
-                onChange={(values) => setSelectedContext(values[0] || availableContexts[0]?.value || '')}
-                placeholder="Select execution context..."
-                multiSelect={false}
-              />
-            </div>
-          </div>
-        </div>
-
         {/* Empty State */}
         <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
           <div className="text-center py-12 text-gray-500">
             <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              <svg
+                className="w-8 h-8 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
               </svg>
             </div>
             <p className="font-medium">No requests found for selected context</p>
-            <p className="text-sm mt-1">Try selecting a different execution context</p>
+            <p className="text-sm mt-1">Try selecting a different execution context from the sidebar</p>
           </div>
         </div>
       </div>
@@ -154,29 +74,7 @@ export const NetworkWaterfallChart: React.FC<Props> = ({ data, availableIteratio
   return (
     <div className="w-full">
       {/* Controls */}
-      <div className="mb-6 space-y-4">
-        {/* Context Selector Row */}
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-64">
-            <MultiSelectDropdown
-              label="Execution Context"
-              options={availableContexts}
-              selectedValues={[selectedContext]}
-              onChange={(values) => setSelectedContext(values[0] || availableContexts[0]?.value || '')}
-              placeholder="Select execution context..."
-              multiSelect={false}
-            />
-          </div>
-          
-          {/* Current Context Display */}
-          <div className="px-4 py-2 bg-blue-50 border border-blue-200 rounded-md">
-            <div className="text-xs text-blue-600 font-medium">Current Context</div>
-            <div className="text-xs text-blue-800 whitespace-pre-line">
-              {availableContexts.find(c => c.value === selectedContext)?.fullLabel || selectedContext}
-            </div>
-          </div>
-        </div>
-
+      <div className="mb-6">
         {/* Statistics and Legend Row */}
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -359,11 +257,7 @@ export const NetworkWaterfallChart: React.FC<Props> = ({ data, availableIteratio
                 {iterationData.map((request) => (
                   <tr key={request.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      <div
-                        className="max-w-xs cursor-help break-all"
-                      >
-                        {request.url}
-                      </div>
+                      <div className="max-w-xs cursor-help break-all">{request.url}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">

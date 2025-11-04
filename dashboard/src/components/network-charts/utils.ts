@@ -1,41 +1,41 @@
 import { NetworkResults, NetworkRequestType } from '@/types/reports';
-import { 
-  NetworkChartDataPoint, 
-  NetworkContextLegendItem, 
-  RequestGroupData, 
+import {
+  NetworkChartDataPoint,
+  NetworkContextLegendItem,
+  RequestGroupData,
   WaterfallDataPoint,
-  REQUEST_TYPE_COLORS 
+  REQUEST_TYPE_COLORS,
 } from './types';
 
 // Parse context key into components for network data
 export const parseNetworkContextKey = (contextKey: string) => {
   const parts = contextKey.split('_');
-  
+
   // For network data, we expect: network_cpu_userState format
   // Handle cases like "slow_4g_no_throttling_new_user"
   let network = '';
   let cpu = '';
   let userState = '';
-  
+
   if (parts.includes('4g')) {
     // Handle slow_4g case
-    const fourGIndex = parts.findIndex(part => part === '4g');
+    const fourGIndex = parts.findIndex((part) => part === '4g');
     network = parts.slice(0, fourGIndex + 1).join('_');
     const remaining = parts.slice(fourGIndex + 1);
-    
+
     if (remaining.includes('throttling')) {
-      const throttlingIndex = remaining.findIndex(part => part === 'throttling');
+      const throttlingIndex = remaining.findIndex((part) => part === 'throttling');
       cpu = remaining.slice(0, throttlingIndex + 1).join('_');
       userState = remaining.slice(throttlingIndex + 1).join('_');
     }
   } else if (parts.includes('throttling')) {
     // Handle no_throttling case
-    const throttlingIndex = parts.findIndex(part => part === 'throttling');
+    const throttlingIndex = parts.findIndex((part) => part === 'throttling');
     network = parts.slice(0, throttlingIndex - 1).join('_');
     cpu = parts.slice(throttlingIndex - 1, throttlingIndex + 1).join('_');
     userState = parts.slice(throttlingIndex + 1).join('_');
   }
-  
+
   return { network, cpu, userState };
 };
 
@@ -72,13 +72,16 @@ export const transformNetworkChartData = (
   const contextLegend = createNetworkContextLegend(requestData);
 
   // Group data by context (execution environment) for x-axis
-  const contextGroups = requestData.reduce((acc, point) => {
-    if (!acc[point.contextKey]) {
-      acc[point.contextKey] = [];
-    }
-    acc[point.contextKey].push(point);
-    return acc;
-  }, {} as Record<string, NetworkChartDataPoint[]>);
+  const contextGroups = requestData.reduce(
+    (acc, point) => {
+      if (!acc[point.contextKey]) {
+        acc[point.contextKey] = [];
+      }
+      acc[point.contextKey].push(point);
+      return acc;
+    },
+    {} as Record<string, NetworkChartDataPoint[]>
+  );
 
   // Create grouped data with each context as a data point and each request as a separate series
   const groupedData = Object.entries(contextGroups).map(([contextKey, points]) => {
@@ -124,7 +127,9 @@ export const createRequestKey = (url: string, method: string, type: string): str
 };
 
 // Get all unique requests from the data
-export const getUniqueRequests = (requestData: NetworkChartDataPoint[]): Array<{
+export const getUniqueRequests = (
+  requestData: NetworkChartDataPoint[]
+): Array<{
   key: string;
   url: string;
   method: string;
@@ -132,7 +137,7 @@ export const getUniqueRequests = (requestData: NetworkChartDataPoint[]): Array<{
   shortUrl: string;
 }> => {
   const uniqueRequests = new Map();
-  
+
   requestData.forEach((point) => {
     const key = createRequestKey(point.url, point.method, point.type);
     if (!uniqueRequests.has(key)) {
@@ -147,7 +152,7 @@ export const getUniqueRequests = (requestData: NetworkChartDataPoint[]): Array<{
       });
     }
   });
-  
+
   return Array.from(uniqueRequests.values());
 };
 
@@ -157,24 +162,25 @@ export const transformWaterfallData = (
   selectedIteration: number = 1
 ): WaterfallDataPoint[] => {
   const waterfallData: WaterfallDataPoint[] = [];
-  
+
   requestData.forEach((request, index) => {
     // Calculate mean values from all measurements
     const measurements = request.measurements;
     if (measurements.length === 0) return;
-    
-    const meanStartTime = measurements.reduce((sum, m) => sum + m.startTime, 0) / measurements.length;
+
+    const meanStartTime =
+      measurements.reduce((sum, m) => sum + m.startTime, 0) / measurements.length;
     const meanDuration = request.mean; // Already calculated
     const meanEndTime = meanStartTime + meanDuration;
     const meanSize = measurements.reduce((sum, m) => sum + m.size, 0) / measurements.length;
-    
+
     // Get most common status code
     const statusCounts: Record<number, number> = {};
-    measurements.forEach(m => {
+    measurements.forEach((m) => {
       statusCounts[m.status] = (statusCounts[m.status] || 0) + 1;
     });
     const mostCommonStatus = parseInt(
-      Object.keys(statusCounts).reduce((a, b) => 
+      Object.keys(statusCounts).reduce((a, b) =>
         statusCounts[parseInt(a)] > statusCounts[parseInt(b)] ? a : b
       )
     );
@@ -207,11 +213,11 @@ export const transformWaterfallData = (
 // Format bytes to human readable format
 export const formatBytes = (bytes: number): string => {
   if (bytes === 0) return '0 B';
-  
+
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 };
 
@@ -228,9 +234,9 @@ export const getRequestTypeColor = (type: NetworkRequestType): string => {
 
 // Calculate statistics for a group of measurements
 export const calculateRequestStats = (measurements: any[]) => {
-  const durations = measurements.map(m => m.duration);
-  const sizes = measurements.map(m => m.size);
-  
+  const durations = measurements.map((m) => m.duration);
+  const sizes = measurements.map((m) => m.size);
+
   return {
     duration: {
       min: Math.min(...durations),

@@ -73,7 +73,10 @@ class MagicCheckoutPOM implements POM {
 
       // Wait for main thread to be idle and mark idle state at the correct timestamp
       const idleTimestamp = await this.performanceMonitor.waitForMainThreadIdle();
-      await this.performanceMonitor.markAtTimestamp(PERFORMANCE_MARKERS.MAIN_THREAD_IDLE, idleTimestamp);
+      await this.performanceMonitor.markAtTimestamp(
+        PERFORMANCE_MARKERS.MAIN_THREAD_IDLE,
+        idleTimestamp
+      );
 
       // Stop network monitoring when main thread is idle
       if (!skipMetrics) {

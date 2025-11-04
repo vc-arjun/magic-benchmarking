@@ -13,233 +13,278 @@ export const NetworkSummary: React.FC<Props> = ({ data, filteredData, filters })
   // Calculate overall statistics
   const allRequests = Object.values(filteredData).flat();
   const totalRequests = allRequests.length;
-  
+
   if (totalRequests === 0) {
     return (
       <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-        <h3 className="text-lg font-semibold mb-4 text-gray-800">Network Summary</h3>
+        <h3 className="text-lg font-semibold mb-4 text-gray-800">Network Analysis Summary</h3>
         <p className="text-gray-600">No data available for the selected filters.</p>
       </div>
     );
   }
 
-  // Calculate aggregated statistics
-  const allMeasurements = allRequests.flatMap(req => req.measurements);
-  const durations = allMeasurements.map(m => m.duration);
-  const sizes = allMeasurements.map(m => m.size);
-  const statusCodes = allMeasurements.map(m => m.status);
+  // Get all measurements and group by iteration
+  const allMeasurements = allRequests.flatMap((req) => req.measurements);
+  const iterationGroups = allMeasurements.reduce(
+    (acc, measurement) => {
+      const iteration = measurement.iteration;
+      if (!acc[iteration]) {
+        acc[iteration] = [];
+      }
+      acc[iteration].push(measurement);
+      return acc;
+    },
+    {} as Record<number, typeof allMeasurements>
+  );
 
-  const durationStats = {
-    min: Math.min(...durations),
-    max: Math.max(...durations),
-    mean: durations.reduce((a, b) => a + b, 0) / durations.length,
-  };
+  // Calculate average total duration and size across all iterations
+  // Duration: from earliest start to latest end (accounting for parallel requests)
+  // Size: sum of all response sizes (this is additive)
+  const iterationTotals = Object.values(iterationGroups).map((measurements) => {
+    const startTimes = measurements.map((m) => m.startTime);
+    const endTimes = measurements.map((m) => m.startTime + m.duration);
 
-  const sizeStats = {
-    min: Math.min(...sizes),
-    max: Math.max(...sizes),
-    mean: sizes.reduce((a, b) => a + b, 0) / sizes.length,
-    total: sizes.reduce((a, b) => a + b, 0),
-  };
+    const earliestStart = Math.min(...startTimes);
+    const latestEnd = Math.max(...endTimes);
 
-  // Status code distribution
-  const statusDistribution = statusCodes.reduce((acc, status) => {
-    acc[status] = (acc[status] || 0) + 1;
-    return acc;
-  }, {} as Record<number, number>);
+    return {
+      totalDuration: latestEnd - earliestStart, // Time span from first start to last end
+      totalSize: measurements.reduce((sum, m) => sum + m.size, 0), // Sum of all sizes
+    };
+  });
 
-  // Request type distribution
-  const typeDistribution = allRequests.reduce((acc, req) => {
-    acc[req.type] = (acc[req.type] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const avgIterationDuration =
+    iterationTotals.reduce((sum, iter) => sum + iter.totalDuration, 0) / iterationTotals.length;
+  const avgIterationSize =
+    iterationTotals.reduce((sum, iter) => sum + iter.totalSize, 0) / iterationTotals.length;
 
-  // Find slowest and largest requests
-  const slowestRequest = allRequests.reduce((prev, current) => 
+  // Request type distribution with detailed stats using iteration averages
+  const typeStats = allRequests.reduce(
+    (acc, req) => {
+      const type = req.type;
+      if (!acc[type]) {
+        acc[type] = {
+          count: 0,
+          avgDuration: 0,
+          avgSize: 0,
+          requests: [],
+        };
+      }
+
+      acc[type].count += 1;
+      acc[type].requests.push(req);
+
+      return acc;
+    },
+    {} as Record<
+      string,
+      {
+        count: number;
+        avgDuration: number;
+        avgSize: number;
+        requests: typeof allRequests;
+      }
+    >
+  );
+
+  // Calculate average duration and size by type across iterations
+  Object.keys(typeStats).forEach((type) => {
+    const typeRequests = typeStats[type].requests;
+
+    // Group measurements by iteration for this type
+    const typeMeasurementsByIteration = typeRequests.reduce(
+      (acc, req) => {
+        req.measurements.forEach((measurement) => {
+          const iteration = measurement.iteration;
+          if (!acc[iteration]) {
+            acc[iteration] = [];
+          }
+          acc[iteration].push(measurement);
+        });
+        return acc;
+      },
+      {} as Record<number, typeof allMeasurements>
+    );
+
+    // Calculate time span and total size per iteration for this type
+    const typeIterationTotals = Object.values(typeMeasurementsByIteration).map((measurements) => {
+      const startTimes = measurements.map((m) => m.startTime);
+      const endTimes = measurements.map((m) => m.startTime + m.duration);
+
+      const earliestStart = Math.min(...startTimes);
+      const latestEnd = Math.max(...endTimes);
+
+      return {
+        totalDuration: latestEnd - earliestStart, // Time span for this type in this iteration
+        totalSize: measurements.reduce((sum, m) => sum + m.size, 0), // Sum of all sizes for this type
+      };
+    });
+
+    // Average across iterations
+    typeStats[type].avgDuration =
+      typeIterationTotals.reduce((sum, iter) => sum + iter.totalDuration, 0) /
+      typeIterationTotals.length;
+    typeStats[type].avgSize =
+      typeIterationTotals.reduce((sum, iter) => sum + iter.totalSize, 0) /
+      typeIterationTotals.length;
+  });
+
+  // Find extreme requests
+  const fastestRequest = allRequests.reduce((prev, current) =>
+    prev.min < current.min ? prev : current
+  );
+
+  const slowestRequest = allRequests.reduce((prev, current) =>
     prev.max > current.max ? prev : current
   );
 
   const largestRequest = allRequests.reduce((prev, current) => {
-    const prevSize = Math.max(...prev.measurements.map(m => m.size));
-    const currentSize = Math.max(...current.measurements.map(m => m.size));
+    const prevSize = Math.max(...prev.measurements.map((m) => m.size));
+    const currentSize = Math.max(...current.measurements.map((m) => m.size));
     return prevSize > currentSize ? prev : current;
   });
 
-  // Context distribution
-  const contextDistribution = allRequests.reduce((acc, req) => {
-    const key = `${req.network} | ${req.cpu} | ${req.userState}`;
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const smallestRequest = allRequests.reduce((prev, current) => {
+    const prevSize = Math.min(...prev.measurements.map((m) => m.size));
+    const currentSize = Math.min(...current.measurements.map((m) => m.size));
+    return prevSize < currentSize ? prev : current;
+  });
+
+  // Get top 3 requests for each category by type
+  const getTop3ByType = (requests: typeof allRequests, sortFn: (a: any, b: any) => number) => {
+    const byType: Record<string, typeof allRequests> = {};
+
+    requests.forEach((req) => {
+      if (!byType[req.type]) byType[req.type] = [];
+      byType[req.type].push(req);
+    });
+
+    Object.keys(byType).forEach((type) => {
+      byType[type] = byType[type].sort(sortFn).slice(0, 3);
+    });
+
+    return byType;
+  };
+
+  const top3Largest = getTop3ByType(allRequests, (a, b) => {
+    const aSize = Math.max(...a.measurements.map((m) => m.size));
+    const bSize = Math.max(...b.measurements.map((m) => m.size));
+    return bSize - aSize;
+  });
+
+  const top3Smallest = getTop3ByType(allRequests, (a, b) => {
+    const aSize = Math.min(...a.measurements.map((m) => m.size));
+    const bSize = Math.min(...b.measurements.map((m) => m.size));
+    return aSize - bSize;
+  });
+
+  const top3Fastest = getTop3ByType(allRequests, (a, b) => a.min - b.min);
+
+  const top3Slowest = getTop3ByType(allRequests, (a, b) => b.max - a.max);
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
       <h3 className="text-xl font-semibold mb-6 text-gray-800">Network Analysis Summary</h3>
-      
+
       {/* Overview Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <div className="bg-blue-50 p-4 rounded-lg">
           <div className="text-sm font-medium text-blue-900">Total Requests</div>
           <div className="text-2xl font-bold text-blue-700">{totalRequests}</div>
-          <div className="text-xs text-blue-600">{allMeasurements.length} measurements</div>
+          <div className="text-xs text-blue-600">Unique request URLs</div>
         </div>
-        
+
         <div className="bg-green-50 p-4 rounded-lg">
           <div className="text-sm font-medium text-green-900">Avg Duration</div>
-          <div className="text-2xl font-bold text-green-700">{formatDuration(durationStats.mean)}</div>
-          <div className="text-xs text-green-600">
-            {formatDuration(durationStats.min)} - {formatDuration(durationStats.max)}
+          <div className="text-2xl font-bold text-green-700">
+            {formatDuration(avgIterationDuration)}
           </div>
+          <div className="text-xs text-green-600">Mean per iteration</div>
         </div>
-        
+
         <div className="bg-purple-50 p-4 rounded-lg">
-          <div className="text-sm font-medium text-purple-900">Total Size</div>
-          <div className="text-2xl font-bold text-purple-700">{formatBytes(sizeStats.total)}</div>
-          <div className="text-xs text-purple-600">Avg: {formatBytes(sizeStats.mean)}</div>
+          <div className="text-sm font-medium text-purple-900">Avg Size</div>
+          <div className="text-2xl font-bold text-purple-700">{formatBytes(avgIterationSize)}</div>
+          <div className="text-xs text-purple-600">Mean per iteration</div>
         </div>
-        
+
         <div className="bg-orange-50 p-4 rounded-lg">
-          <div className="text-sm font-medium text-orange-900">Success Rate</div>
-          <div className="text-2xl font-bold text-orange-700">
-            {Math.round((statusCodes.filter(s => s >= 200 && s < 300).length / statusCodes.length) * 100)}%
-          </div>
-          <div className="text-xs text-orange-600">
-            {statusCodes.filter(s => s >= 200 && s < 300).length} / {statusCodes.length}
-          </div>
+          <div className="text-sm font-medium text-orange-900">Request Types</div>
+          <div className="text-2xl font-bold text-orange-700">{Object.keys(typeStats).length}</div>
+          <div className="text-xs text-orange-600">Different types</div>
         </div>
       </div>
 
-      {/* Detailed Statistics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Duration Statistics */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-gray-800 mb-3">Duration Statistics</h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Minimum:</span>
-              <span className="font-medium">{formatDuration(durationStats.min)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Maximum:</span>
-              <span className="font-medium">{formatDuration(durationStats.max)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Average:</span>
-              <span className="font-medium">{formatDuration(durationStats.mean)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Measurements:</span>
-              <span className="font-medium">{durations.length}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Size Statistics */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-gray-800 mb-3">Size Statistics</h4>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Minimum:</span>
-              <span className="font-medium">{formatBytes(sizeStats.min)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Maximum:</span>
-              <span className="font-medium">{formatBytes(sizeStats.max)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Average:</span>
-              <span className="font-medium">{formatBytes(sizeStats.mean)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total:</span>
-              <span className="font-medium">{formatBytes(sizeStats.total)}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Request Type Distribution */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-gray-800 mb-3">Request Types</h4>
-          <div className="space-y-2">
-            {Object.entries(typeDistribution)
-              .sort(([,a], [,b]) => b - a)
-              .map(([type, count]) => (
-                <div key={type} className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 capitalize">{type}</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-500 h-2 rounded-full"
-                        style={{ width: `${(count / totalRequests) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium w-8 text-right">{count}</span>
-                  </div>
+      {/* Request Count by Type */}
+      <div className="mb-8">
+        <h4 className="font-semibold text-gray-800 mb-4">Request Count by Type</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Object.entries(typeStats)
+            .sort(([, a], [, b]) => b.count - a.count)
+            .map(([type, stats]) => (
+              <div key={type} className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-xs font-medium text-gray-600 uppercase">{type}</div>
+                <div className="text-lg font-bold text-gray-800">{stats.count}</div>
+                <div className="text-xs text-gray-500">
+                  {Math.round((stats.count / totalRequests) * 100)}% of total
                 </div>
-              ))}
-          </div>
-        </div>
-
-        {/* Status Code Distribution */}
-        <div className="bg-gray-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-gray-800 mb-3">Status Codes</h4>
-          <div className="space-y-2">
-            {Object.entries(statusDistribution)
-              .sort(([,a], [,b]) => b - a)
-              .map(([status, count]) => (
-                <div key={status} className="flex justify-between items-center">
-                  <span className={`text-sm font-medium ${
-                    parseInt(status) >= 200 && parseInt(status) < 300
-                      ? 'text-green-600'
-                      : parseInt(status) >= 300 && parseInt(status) < 400
-                      ? 'text-yellow-600'
-                      : 'text-red-600'
-                  }`}>
-                    {status}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 bg-gray-200 rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full ${
-                          parseInt(status) >= 200 && parseInt(status) < 300
-                            ? 'bg-green-500'
-                            : parseInt(status) >= 300 && parseInt(status) < 400
-                            ? 'bg-yellow-500'
-                            : 'bg-red-500'
-                        }`}
-                        style={{ width: `${(count / allMeasurements.length) * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium w-8 text-right">{count}</span>
-                  </div>
-                </div>
-              ))}
-          </div>
+              </div>
+            ))}
         </div>
       </div>
 
-      {/* Notable Requests */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Size by Type */}
+      <div className="mb-8">
+        <h4 className="font-semibold text-gray-800 mb-4">Average Size by Type</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Object.entries(typeStats)
+            .sort(([, a], [, b]) => b.avgSize - a.avgSize)
+            .map(([type, stats]) => (
+              <div key={type} className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-xs font-medium text-gray-600 uppercase">{type}</div>
+                <div className="text-lg font-bold text-gray-800">{formatBytes(stats.avgSize)}</div>
+                <div className="text-xs text-gray-500">Mean per iteration</div>
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* Duration by Type */}
+      <div className="mb-8">
+        <h4 className="font-semibold text-gray-800 mb-4">Average Time Span by Type</h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Object.entries(typeStats)
+            .sort(([, a], [, b]) => b.avgDuration - a.avgDuration)
+            .map(([type, stats]) => (
+              <div key={type} className="bg-gray-50 p-3 rounded-lg">
+                <div className="text-xs font-medium text-gray-600 uppercase">{type}</div>
+                <div className="text-lg font-bold text-gray-800">
+                  {formatDuration(stats.avgDuration)}
+                </div>
+                <div className="text-xs text-gray-500">Time span per iteration</div>
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* Extreme Requests */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="bg-green-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-green-800 mb-3">Fastest Request</h4>
+          <div className="text-sm space-y-1">
+            <div className="font-medium text-green-700">{formatDuration(fastestRequest.min)}</div>
+            <div className="text-green-600 break-all text-xs">{fastestRequest.url}</div>
+            <div className="text-green-500 text-xs">
+              {fastestRequest.method} • {fastestRequest.type.toUpperCase()}
+            </div>
+          </div>
+        </div>
+
         <div className="bg-red-50 p-4 rounded-lg">
           <h4 className="font-semibold text-red-800 mb-3">Slowest Request</h4>
           <div className="text-sm space-y-1">
-            <div className="font-medium text-red-700">
-              {formatDuration(slowestRequest.max)}
-            </div>
-            <div 
-              className="text-red-600 cursor-help break-all text-xs" 
-              title={`Full URL: ${slowestRequest.url}`}
-              style={{ 
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden'
-              }}
-            >
-              {slowestRequest.url}
-            </div>
+            <div className="font-medium text-red-700">{formatDuration(slowestRequest.max)}</div>
+            <div className="text-red-600 break-all text-xs">{slowestRequest.url}</div>
             <div className="text-red-500 text-xs">
               {slowestRequest.method} • {slowestRequest.type.toUpperCase()}
             </div>
@@ -250,23 +295,118 @@ export const NetworkSummary: React.FC<Props> = ({ data, filteredData, filters })
           <h4 className="font-semibold text-yellow-800 mb-3">Largest Request</h4>
           <div className="text-sm space-y-1">
             <div className="font-medium text-yellow-700">
-              {formatBytes(Math.max(...largestRequest.measurements.map(m => m.size)))}
+              {formatBytes(Math.max(...largestRequest.measurements.map((m) => m.size)))}
             </div>
-            <div 
-              className="text-yellow-600 cursor-help break-all text-xs" 
-              title={`Full URL: ${largestRequest.url}`}
-              style={{ 
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                overflow: 'hidden'
-              }}
-            >
-              {largestRequest.url}
-            </div>
+            <div className="text-yellow-600 break-all text-xs">{largestRequest.url}</div>
             <div className="text-yellow-500 text-xs">
               {largestRequest.method} • {largestRequest.type.toUpperCase()}
             </div>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <h4 className="font-semibold text-blue-800 mb-3">Smallest Request</h4>
+          <div className="text-sm space-y-1">
+            <div className="font-medium text-blue-700">
+              {formatBytes(Math.min(...smallestRequest.measurements.map((m) => m.size)))}
+            </div>
+            <div className="text-blue-600 break-all text-xs">{smallestRequest.url}</div>
+            <div className="text-blue-500 text-xs">
+              {smallestRequest.method} • {smallestRequest.type.toUpperCase()}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Top 3 Analysis by Type */}
+      <div className="space-y-6">
+        {/* Top 3 Largest by Type */}
+        <div>
+          <h4 className="font-semibold text-gray-800 mb-4">Top 3 Largest Requests by Type</h4>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            {Object.entries(top3Largest).map(([type, requests]) => (
+              <div key={type} className="bg-gray-50 p-4 rounded-lg">
+                <h5 className="font-medium text-gray-700 mb-3 uppercase text-sm">{type}</h5>
+                <div className="space-y-2">
+                  {requests.map((req, index) => (
+                    <div key={`${req.url}-${index}`} className="text-xs">
+                      <div className="font-medium text-gray-800">
+                        #{index + 1}:{' '}
+                        {formatBytes(Math.max(...req.measurements.map((m) => m.size)))}
+                      </div>
+                      <div className="text-gray-600 break-all">{req.url}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top 3 Smallest by Type */}
+        <div>
+          <h4 className="font-semibold text-gray-800 mb-4">Top 3 Smallest Requests by Type</h4>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            {Object.entries(top3Smallest).map(([type, requests]) => (
+              <div key={type} className="bg-gray-50 p-4 rounded-lg">
+                <h5 className="font-medium text-gray-700 mb-3 uppercase text-sm">{type}</h5>
+                <div className="space-y-2">
+                  {requests.map((req, index) => (
+                    <div key={`${req.url}-${index}`} className="text-xs">
+                      <div className="font-medium text-gray-800">
+                        #{index + 1}:{' '}
+                        {formatBytes(Math.min(...req.measurements.map((m) => m.size)))}
+                      </div>
+                      <div className="text-gray-600 break-all">{req.url}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top 3 Fastest by Type */}
+        <div>
+          <h4 className="font-semibold text-gray-800 mb-4">Top 3 Fastest Requests by Type</h4>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            {Object.entries(top3Fastest).map(([type, requests]) => (
+              <div key={type} className="bg-gray-50 p-4 rounded-lg">
+                <h5 className="font-medium text-gray-700 mb-3 uppercase text-sm">{type}</h5>
+                <div className="space-y-2">
+                  {requests.map((req, index) => (
+                    <div key={`${req.url}-${index}`} className="text-xs">
+                      <div className="font-medium text-gray-800">
+                        #{index + 1}: {formatDuration(req.min)}
+                      </div>
+                      <div className="text-gray-600 break-all">{req.url}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Top 3 Slowest by Type */}
+        <div>
+          <h4 className="font-semibold text-gray-800 mb-4">Top 3 Slowest Requests by Type</h4>
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+            {Object.entries(top3Slowest).map(([type, requests]) => (
+              <div key={type} className="bg-gray-50 p-4 rounded-lg">
+                <h5 className="font-medium text-gray-700 mb-3 uppercase text-sm">{type}</h5>
+                <div className="space-y-2">
+                  {requests.map((req, index) => (
+                    <div key={`${req.url}-${index}`} className="text-xs">
+                      <div className="font-medium text-gray-800">
+                        #{index + 1}: {formatDuration(req.max)}
+                      </div>
+                      <div className="text-gray-600 break-all">{req.url}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
