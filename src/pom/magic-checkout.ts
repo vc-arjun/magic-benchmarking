@@ -71,9 +71,9 @@ class MagicCheckoutPOM implements POM {
       await expect(contactNumberInput).toBeVisible();
       await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.CONTENT_APPEARS);
 
-      // Wait for main thread to be idle and mark idle state
-      await this.performanceMonitor.waitForMainThreadIdle();
-      await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.MAIN_THREAD_IDLE);
+      // Wait for main thread to be idle and mark idle state at the correct timestamp
+      const idleTimestamp = await this.performanceMonitor.waitForMainThreadIdle();
+      await this.performanceMonitor.markAtTimestamp(PERFORMANCE_MARKERS.MAIN_THREAD_IDLE, idleTimestamp);
 
       // Stop network monitoring when main thread is idle
       if (!skipMetrics) {

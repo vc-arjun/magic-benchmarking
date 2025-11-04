@@ -26,6 +26,15 @@ export class PerformanceMonitor {
   }
 
   /**
+   * Mark a performance measurement at a specific timestamp
+   */
+  public async markAtTimestamp(markName: string, timestamp: number): Promise<void> {
+    await this.page?.evaluate(({ name, time }) => {
+      performance.mark(name, { startTime: time });
+    }, { name: markName, time: timestamp });
+  }
+
+  /**
    * Mark the end of performance measurement and calculate duration
    */
   public async markEnd(markName: string, startMark: string): Promise<number> {
@@ -109,10 +118,11 @@ export class PerformanceMonitor {
 
   /**
    * Wait for the main thread to be idle (no long tasks for a specified duration)
+   * Returns the timestamp when the main thread became idle
    */
-  public async waitForMainThreadIdle(timeout: number = 5000): Promise<void> {
-    await this.page?.evaluate((timeoutMs) => {
-      return new Promise<void>((resolve) => {
+  public async waitForMainThreadIdle(timeout: number = 5000): Promise<number> {
+    const idleTimestamp = await this.page?.evaluate((timeoutMs) => {
+      return new Promise<number>((resolve) => {
         let idleTimer: NodeJS.Timeout;
         let observer: PerformanceObserver;
         
@@ -120,7 +130,9 @@ export class PerformanceMonitor {
           clearTimeout(idleTimer);
           idleTimer = setTimeout(() => {
             observer?.disconnect();
-            resolve();
+            // Return the timestamp when we determined the main thread is idle
+            // This is approximately when the last long task ended + 100ms
+            resolve(performance.now());
           }, 100); // Consider idle after 100ms of no long tasks
         };
 
@@ -139,9 +151,11 @@ export class PerformanceMonitor {
         setTimeout(() => {
           observer?.disconnect();
           clearTimeout(idleTimer);
-          resolve();
+          resolve(performance.now());
         }, timeoutMs);
       });
     }, timeout);
+
+    return idleTimestamp ?? performance.now();
   }
 }
