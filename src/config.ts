@@ -36,7 +36,7 @@ function getDefaultConfig(): Config {
         },
         '4x_slowdown': {
           rate: 4,
-          enabled: false,
+          enabled: true,
         },
       },
       user_state: {
@@ -47,7 +47,7 @@ function getDefaultConfig(): Config {
       },
     },
     execution: {
-      iterations: 2,
+      iterations: 30,
       timeout: 120000, // 2 minutes for slow network conditions
       headless: true,
       browsers: ['chromium'],
