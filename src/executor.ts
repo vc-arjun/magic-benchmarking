@@ -303,7 +303,15 @@ export class TestExecutor {
         this.networkMonitor.setExecutionContext(executionContext, iteration);
       }
 
-      const pomModule = await import(`./pom/${this.product.pom_file}`);
+      // Import POM module - ensure correct extension for compiled environment
+      const pomFile = this.product.pom_file.endsWith('.ts') 
+        ? this.product.pom_file.replace('.ts', '.js')
+        : this.product.pom_file.endsWith('.js')
+        ? this.product.pom_file
+        : `${this.product.pom_file}.js`;
+      
+      const pomModule = await import(`./pom/${pomFile}`);
+      
       pom = new pomModule.default(page, this.product, this.performanceMonitor, this.networkMonitor);
 
       // Initialize and run the test
