@@ -6,6 +6,13 @@ import { PerformanceMonitor } from './performance';
 import { NetworkMonitor } from './network-monitor';
 import { ExecutionContext, ContextResults, Measurement, InitialLoadMetrics, ProductResults, MetricStatistics } from './types/metrics';
 import { NetworkResults } from './types/network';
+import { 
+  ErrorHandler, 
+  createLogger, 
+  logPerformance,
+  calculateStatistics,
+  delay 
+} from './utils';
 
 export class TestExecutor {
   private product: ProductConfig;
@@ -13,50 +20,71 @@ export class TestExecutor {
   private performanceMonitor: PerformanceMonitor;
   private networkMonitor: NetworkMonitor;
   private failedIterations: Array<{combination: {network: string, cpu: string, user_state: string}, iteration: number, error: string}> = [];
+  private executorLogger: ReturnType<typeof createLogger>;
 
   constructor(product: ProductConfig) {
     this.product = product;
     this.config = CONFIG;
     this.performanceMonitor = new PerformanceMonitor();
     this.networkMonitor = new NetworkMonitor();
+    this.executorLogger = createLogger(`TestExecutor:${product.name}`);
   }
 
+  @logPerformance
   async run(): Promise<void> {
-    try {
-      console.log(`Starting execution for ${this.product.name}`);
-      
-      // Reset measurements for fresh run
-      this.performanceMonitor.reset();
-      
-      // Get execution matrix combinations
-      const executionCombinations = this.generateExecutionCombinations();
-      
-      for (const combination of executionCombinations) {
-        console.log(`\n--- Testing combination: ${JSON.stringify(combination, null, 2)} ---`);
+    return ErrorHandler.withRetry(
+      async () => {
+        this.executorLogger.info('Starting execution', {
+          product: this.product.name,
+          iterations: this.config.execution.iterations,
+        });
         
-        // Warmup iteration with retry logic
-        console.log(`\n--- Starting warmup iteration ---`);
-        await this.runIterationWithRetry(combination, 0, true);
-        console.log(`\n--- Warmup iteration completed successfully ---`);
+        // Reset measurements for fresh run
+        this.performanceMonitor.reset();
+        this.networkMonitor.reset();
         
-        // Actual iterations with retry logic
-        for (let i = 1; i <= this.config.execution.iterations; i++) {
-          console.log(`\n--- Starting iteration ${i} of ${this.config.execution.iterations} ---`);
-          await this.runIterationWithRetry(combination, i);
-          console.log(`\n--- Iteration ${i} completed successfully ---`);
+        // Get execution matrix combinations
+        const executionCombinations = this.generateExecutionCombinations();
+        this.executorLogger.info('Generated execution combinations', {
+          combinationsCount: executionCombinations.length,
+          combinations: executionCombinations,
+        });
+        
+        for (const [index, combination] of executionCombinations.entries()) {
+          this.executorLogger.info(`Testing combination ${index + 1}/${executionCombinations.length}`, {
+            combination,
+            progress: `${Math.round(((index) / executionCombinations.length) * 100)}%`,
+          });
           
-          await new Promise((resolve) => setTimeout(resolve, 1000));
+          // Warmup iteration with retry logic
+          this.executorLogger.debug('Starting warmup iteration');
+          await this.runIterationWithRetry(combination, 0, true);
+          this.executorLogger.debug('Warmup iteration completed');
+          
+          // Actual iterations with retry logic
+          for (let i = 1; i <= this.config.execution.iterations; i++) {
+            this.executorLogger.debug(`Starting iteration ${i}/${this.config.execution.iterations}`);
+            await this.runIterationWithRetry(combination, i);
+            this.executorLogger.debug(`Iteration ${i} completed`);
+            
+            // Small delay between iterations to prevent resource exhaustion
+            await delay(1000);
+          }
         }
+        
+        // Print execution summary
+        this.printExecutionSummary();
+        
+        this.executorLogger.info('Execution completed successfully', {
+          totalIterations: executionCombinations.length * this.config.execution.iterations,
+          failedIterations: this.failedIterations.length,
+        });
+      },
+      {
+        maxAttempts: 1, // Don't retry the entire execution
+        shouldRetry: () => false,
       }
-      
-      // Print execution summary
-      this.printExecutionSummary();
-      
-      console.log(`\n🎉 Execution completed for ${this.product.name}`);
-    } catch (error) {
-      console.log(`Failed to execute for ${this.product.name}: ${error}`);
-      throw error;
-    }
+    );
   }
 
   /**
@@ -394,15 +422,13 @@ export class TestExecutor {
     }
 
     const values = measurements.map(m => m.value);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
-    const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+    const stats = calculateStatistics(values);
 
     return {
-      min,
-      max,
-      mean: Math.round(mean * 100) / 100, // Round to 2 decimal places
-      count: measurements.length,
+      min: stats.min,
+      max: stats.max,
+      mean: stats.mean,
+      count: stats.count,
     };
   }
 

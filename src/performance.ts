@@ -1,13 +1,17 @@
 import { Page } from 'playwright';
 import { InitialLoadMetrics, ExecutionContext, Measurement } from './types/metrics';
+import { PerformanceError, createLogger, ErrorHandler } from './utils';
 
 export class PerformanceMonitor {
   private page: Page | null = null;
   private currentExecutionContext: ExecutionContext | null = null;
   private currentIteration: number = 0;
   private measurements: Map<string, Measurement[]> = new Map();
+  private performanceLogger: ReturnType<typeof createLogger>;
 
-  constructor() {}
+  constructor() {
+    this.performanceLogger = createLogger('PerformanceMonitor');
+  }
 
   /**
    * Update the page instance for fresh browser contexts
@@ -20,9 +24,24 @@ export class PerformanceMonitor {
    * Mark the start of performance measurement
    */
   public async markStart(markName: string): Promise<void> {
-    await this.page?.evaluate((name) => {
-      performance.mark(name);
-    }, markName);
+    if (!this.page) {
+      throw new PerformanceError('Page not set. Call setPage() before marking performance.');
+    }
+
+    return ErrorHandler.withRetry(
+      async () => {
+        await this.page!.evaluate((name) => {
+          performance.mark(name);
+        }, markName);
+        this.performanceLogger.debug('Performance mark created', { markName });
+      },
+      {
+        maxAttempts: 3,
+        onRetry: (attempt, error) => {
+          this.performanceLogger.warn(`Retry attempt ${attempt} for markStart`, { markName, error: error.message });
+        },
+      }
+    );
   }
 
   /**
@@ -78,13 +97,17 @@ export class PerformanceMonitor {
    */
   public recordMetric(metricName: InitialLoadMetrics, value: number, unit: string): void {
     if (!this.currentExecutionContext) {
-      throw new Error('Execution context must be set before recording metrics');
+      throw new PerformanceError('Execution context must be set before recording metrics');
+    }
+
+    if (value < 0) {
+      this.performanceLogger.warn('Negative metric value recorded', { metricName, value, unit });
     }
 
     const contextKey = this.getContextKey(this.currentExecutionContext);
     const measurement: Measurement = {
       iteration: this.currentIteration,
-      value,
+      value: Math.max(0, value), // Ensure non-negative values
       unit,
     };
 
@@ -93,6 +116,11 @@ export class PerformanceMonitor {
       this.measurements.set(key, []);
     }
     this.measurements.get(key)!.push(measurement);
+
+    this.performanceLogger.metric(metricName, measurement.value, unit, {
+      iteration: this.currentIteration,
+      context: this.currentExecutionContext,
+    });
   }
 
   /**

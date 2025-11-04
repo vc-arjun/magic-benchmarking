@@ -1,6 +1,11 @@
 import { Config } from './types/config';
+import { ValidationUtils, ConfigurationError, logger } from './utils';
 
-export const CONFIG: Config = {
+/**
+ * Load and validate configuration with comprehensive error handling
+ */
+function loadConfig(): Config {
+  const rawConfig: Config = {
   products: [
     {
       name: 'MagicCheckout',
@@ -56,4 +61,28 @@ export const CONFIG: Config = {
     formats: ['json', 'csv'],
     directory: './dashboard/public/results',
   },
-};
+  };
+
+  try {
+    // Validate configuration
+    const validatedConfig = ValidationUtils.validateConfig(rawConfig);
+    logger.info('Configuration loaded and validated successfully', {
+      productsCount: validatedConfig.products.length,
+      enabledProducts: validatedConfig.products.filter(p => p.enabled).length,
+      iterations: validatedConfig.execution.iterations,
+      outputFormats: validatedConfig.output.formats,
+    });
+    return validatedConfig;
+  } catch (error) {
+    logger.error('Configuration validation failed', error instanceof Error ? error : new Error(String(error)));
+    throw new ConfigurationError(
+      'Invalid configuration detected. Please check your config values.',
+      { originalError: error }
+    );
+  }
+}
+
+/**
+ * Validated configuration instance
+ */
+export const CONFIG = loadConfig();
