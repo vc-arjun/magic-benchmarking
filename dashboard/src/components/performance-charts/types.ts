@@ -32,7 +32,7 @@ export interface GroupedDataPoint {
   contextKey: string;
   shortLabel: string;
   contextIndex: number;
-  [productName: string]: string | number; // Dynamic product data
+  [productName: string]: string | number | number[]; // Dynamic product data (includes iterations array)
 }
 
 export const CHART_COLORS = [

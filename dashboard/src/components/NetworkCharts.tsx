@@ -6,5 +6,5 @@ type Props = {
 };
 
 export const NetworkCharts: React.FC<Props> = () => {
-  return <div>NetworkCharts</div>;
+  return <div>Work in progress</div>;
 };

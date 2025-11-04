@@ -29,11 +29,45 @@ export const PerformanceBarChart: React.FC<Props> = ({ data, products, contextLe
           <Tooltip
             formatter={(value: string, name: string) => [
               `${parseFloat(value).toFixed(2)} ms`,
-              name.replace(/_min|_max/, ''),
+              name.replace(/_min|_max|_iterations/, ''),
             ]}
             labelFormatter={(label, payload) => {
               const item = payload?.[0]?.payload;
-              return item ? `Context ${item.contextIndex}: ${item.contextLabel}` : label;
+              if (!item) return label;
+
+              // Build detailed tooltip content
+              let content = `Context ${item.contextIndex}: ${item.contextLabel}\n\n`;
+
+              // Add statistics for each product
+              payload?.forEach((entry) => {
+                if (
+                  entry.dataKey &&
+                  !entry.dataKey.toString().includes('_min') &&
+                  !entry.dataKey.toString().includes('_max')
+                ) {
+                  const productName = entry.dataKey.toString();
+                  const mean = item[productName];
+                  const min = item[`${productName}_min`];
+                  const max = item[`${productName}_max`];
+                  const iterations = item[`${productName}_iterations`] as number[];
+
+                  if (
+                    typeof mean === 'number' &&
+                    typeof min === 'number' &&
+                    typeof max === 'number' &&
+                    iterations
+                  ) {
+                    content += `${productName}:\n`;
+                    content += `  Mean: ${mean.toFixed(2)} ms\n`;
+                    content += `  Min: ${min.toFixed(2)} ms\n`;
+                    content += `  Max: ${max.toFixed(2)} ms\n`;
+                    content += `  Range: ${(max - min).toFixed(2)} ms\n`;
+                    content += `  Iterations: ${iterations.map((v) => v.toFixed(2)).join(', ')} ms\n\n`;
+                  }
+                }
+              });
+
+              return content.trim();
             }}
             contentStyle={{
               fontSize: 12,
@@ -41,6 +75,7 @@ export const PerformanceBarChart: React.FC<Props> = ({ data, products, contextLe
               color: '#666',
               whiteSpace: 'pre-line',
               lineHeight: '1.4',
+              maxWidth: '400px',
             }}
           />
           <Legend />

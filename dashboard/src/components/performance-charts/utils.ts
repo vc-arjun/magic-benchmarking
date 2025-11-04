@@ -80,6 +80,7 @@ export const transformChartData = (
       existing[point.product] = point.mean;
       existing[`${point.product}_min`] = point.min;
       existing[`${point.product}_max`] = point.max;
+      existing[`${point.product}_iterations`] = point.measurements;
     } else {
       // Find the index for this context
       const contextIndex =
@@ -93,6 +94,7 @@ export const transformChartData = (
         [point.product]: point.mean,
         [`${point.product}_min`]: point.min,
         [`${point.product}_max`]: point.max,
+        [`${point.product}_iterations`]: point.measurements,
       });
     }
     return acc;
