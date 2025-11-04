@@ -65,8 +65,15 @@ export type {
 };
 
 // Dashboard-specific types
+export interface NetworkAnalysisReport {
+  timestamp: string;
+  monitoring_phase: string;
+  description: string;
+  products: NetworkResults[];
+}
+
 export interface ReportFile {
   name: string;
-  content: BenchmarkResults | NetworkResults;
+  content: BenchmarkResults | NetworkAnalysisReport;
   type: 'performance' | 'network';
 }

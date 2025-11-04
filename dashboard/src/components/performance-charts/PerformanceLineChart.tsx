@@ -106,7 +106,7 @@ export const PerformanceLineChart: React.FC<Props> = ({ data, products, contextL
         </LineChart>
       </ResponsiveContainer>
 
-      <ContextLegend contextLegend={contextLegend} />
+      <ContextLegend items={contextLegend} />
     </div>
   );
 };

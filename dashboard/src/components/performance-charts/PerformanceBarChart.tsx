@@ -90,7 +90,7 @@ export const PerformanceBarChart: React.FC<Props> = ({ data, products, contextLe
         </BarChart>
       </ResponsiveContainer>
 
-      <ContextLegend contextLegend={contextLegend} />
+      <ContextLegend items={contextLegend} />
     </div>
   );
 };
