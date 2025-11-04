@@ -76,7 +76,7 @@ export const PerformanceLineChart: React.FC<Props> = ({ data, products, contextL
                     content += `  Mean: ${mean.toFixed(2)} ms\n`;
                     content += `  Min: ${min.toFixed(2)} ms\n`;
                     content += `  Max: ${max.toFixed(2)} ms\n`;
-                    content += `  Iterations: ${iterations.map((v) => `${v.toFixed(2)} ms`).join(', ')}\n\n`;
+                    content += `  Iterations: ${iterations.length}\n\n`;
                   }
                 }
               });

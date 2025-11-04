@@ -62,7 +62,7 @@ export const PerformanceBarChart: React.FC<Props> = ({ data, products, contextLe
                     content += `  Min: ${min.toFixed(2)} ms\n`;
                     content += `  Max: ${max.toFixed(2)} ms\n`;
                     content += `  Range: ${(max - min).toFixed(2)} ms\n`;
-                    content += `  Iterations: ${iterations.map((v) => v.toFixed(2)).join(', ')} ms\n\n`;
+                    content += `  Iterations: ${iterations.length}\n\n`;
                   }
                 }
               });
