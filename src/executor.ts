@@ -303,14 +303,33 @@ export class TestExecutor {
         this.networkMonitor.setExecutionContext(executionContext, iteration);
       }
 
-      // Import POM module - ensure correct extension for compiled environment
-      const pomFile = this.product.pom_file.endsWith('.ts') 
-        ? this.product.pom_file.replace('.ts', '.js')
-        : this.product.pom_file.endsWith('.js')
-        ? this.product.pom_file
-        : `${this.product.pom_file}.js`;
-      
-      const pomModule = await import(`./pom/${pomFile}`);
+      // Import POM module - handle both development (.ts) and production (.js) environments
+      let pomModule;
+      try {
+        // First try: development mode with .ts extension
+        if (process.env.NODE_ENV !== 'production') {
+          pomModule = await import(`./pom/${this.product.pom_file}.ts`);
+        } else {
+          // Production mode: use .js extension
+          const pomFile = this.product.pom_file.endsWith('.ts') 
+            ? this.product.pom_file.replace('.ts', '.js')
+            : `${this.product.pom_file}.js`;
+          pomModule = await import(`./pom/${pomFile}`);
+        }
+      } catch (error) {
+        // Fallback: try the other extension
+        try {
+          if (process.env.NODE_ENV !== 'production') {
+            // Try without .ts extension in development
+            pomModule = await import(`./pom/${this.product.pom_file}`);
+          } else {
+            // Try .ts in production (shouldn't happen but just in case)
+            pomModule = await import(`./pom/${this.product.pom_file}.ts`);
+          }
+        } catch (fallbackError) {
+          throw new Error(`Could not import POM module: ${this.product.pom_file}. Tried both .ts and .js extensions. Original error: ${error}. Fallback error: ${fallbackError}`);
+        }
+      }
       
       pom = new pomModule.default(page, this.product, this.performanceMonitor, this.networkMonitor);
 
