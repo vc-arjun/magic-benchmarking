@@ -43,6 +43,19 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
 
+      - name: Download existing reports
+        run: |
+          echo "📥 Downloading existing reports from deployed site..."
+          mkdir -p dashboard/public
+          # Try to download existing reports.json from GitHub Pages
+          if curl -f -s -o dashboard/public/reports.json "https://${{ github.repository_owner }}.github.io/magic-benchmarking/reports.json"; then
+            echo "✅ Downloaded existing reports.json"
+            echo "📊 Existing reports count: $(cat dashboard/public/reports.json | jq length 2>/dev/null || echo 'unknown')"
+          else
+            echo "ℹ️  No existing reports.json found (first run or site not deployed yet)"
+            echo "[]" > dashboard/public/reports.json
+          fi
+
       - name: Run benchmarking
         run: npm start
         env:
@@ -50,6 +63,20 @@ jobs:
 
       - name: Build dashboard
         run: npm run web:build
+
+      - name: Verify final reports
+        run: |
+          echo "📊 Final reports summary:"
+          if [ -f "dashboard/public/reports.json" ]; then
+            total_reports=$(cat dashboard/public/reports.json | jq length 2>/dev/null || echo 0)
+            performance_reports=$(cat dashboard/public/reports.json | jq '[.[] | select(.type == "performance")] | length' 2>/dev/null || echo 0)
+            network_reports=$(cat dashboard/public/reports.json | jq '[.[] | select(.type == "network")] | length' 2>/dev/null || echo 0)
+            echo "  📈 Total reports: $total_reports"
+            echo "  ⚡ Performance reports: $performance_reports"
+            echo "  🌐 Network reports: $network_reports"
+          else
+            echo "  ❌ No reports.json found"
+          fi
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
