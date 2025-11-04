@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { WaterfallDataPoint, NetworkChartDataPoint } from './types';
 import { formatDuration, formatBytes } from './utils';
 
@@ -9,12 +9,7 @@ interface Props {
   selectedContext: string;
 }
 
-export const NetworkWaterfallChart: React.FC<Props> = ({
-  data,
-  availableIterations,
-  requestData,
-  selectedContext,
-}) => {
+export const NetworkWaterfallChart: React.FC<Props> = ({ data, availableIterations }) => {
   const [hoveredRequest, setHoveredRequest] = useState<string | null>(null);
 
   // Since data is already filtered by context globally, we can use it directly
@@ -43,7 +38,9 @@ export const NetworkWaterfallChart: React.FC<Props> = ({
               </svg>
             </div>
             <p className="font-medium">No requests found for selected context</p>
-            <p className="text-sm mt-1">Try selecting a different execution context from the sidebar</p>
+            <p className="text-sm mt-1">
+              Try selecting a different execution context from the sidebar
+            </p>
           </div>
         </div>
       </div>

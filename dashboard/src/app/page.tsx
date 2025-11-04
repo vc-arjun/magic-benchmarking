@@ -10,8 +10,15 @@ import { Error } from '@/components/Error';
 const Dashboard = () => {
   const { reports, loading, error, refreshReports } = useReports();
 
-  const performanceReports = reports.filter((item) => item.type === 'performance');
-  const networkReports = reports.filter((item) => item.type === 'network');
+  // Sort reports by timestamp (latest first) and then filter by type
+  const sortedReports = [...reports].sort((a, b) => {
+    const timestampA = new Date(a.content.timestamp).getTime();
+    const timestampB = new Date(b.content.timestamp).getTime();
+    return timestampB - timestampA; // Descending order (latest first)
+  });
+
+  const performanceReports = sortedReports.filter((item) => item.type === 'performance');
+  const networkReports = sortedReports.filter((item) => item.type === 'network');
 
   if (loading) {
     return <Loading />;

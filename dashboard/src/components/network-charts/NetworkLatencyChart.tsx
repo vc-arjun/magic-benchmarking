@@ -21,6 +21,23 @@ import {
 import { formatDuration, formatBytes, getUniqueRequests } from './utils';
 import { ContextLegend } from '../ContextLegend';
 
+// Interface for tooltip data point
+interface TooltipDataPoint {
+  contextLabel: string;
+  [key: string]:
+    | string
+    | number
+    | {
+        size: number;
+        duration: number;
+        status: number;
+        iteration: number;
+        startTime: number;
+        endTime: number;
+      }[]
+    | undefined;
+}
+
 interface Props {
   data: RequestGroupData[];
   requestData: NetworkChartDataPoint[];
@@ -39,7 +56,14 @@ export const NetworkLatencyChart: React.FC<Props> = ({
   // Get unique requests to create separate lines
   const uniqueRequests = getUniqueRequests(requestData);
   // Custom tooltip component
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({
+    active,
+    payload,
+  }: {
+    active?: boolean;
+    payload?: { dataKey: string; value: number; color: string; payload: TooltipDataPoint }[];
+    label?: string;
+  }) => {
     if (active && payload && payload.length) {
       const dataPoint = payload[0].payload;
 
@@ -51,94 +75,107 @@ export const NetworkLatencyChart: React.FC<Props> = ({
             {dataPoint.contextLabel}
           </div>
 
-          {payload.map((entry: any, index: number) => {
-            const requestKey = entry.dataKey;
-            const value = entry.value;
-            const minValue = dataPoint[`${requestKey}_min`];
-            const maxValue = dataPoint[`${requestKey}_max`];
-            const count = dataPoint[`${requestKey}_count`];
-            const url = dataPoint[`${requestKey}_url`];
-            const method = dataPoint[`${requestKey}_method`];
-            const type = dataPoint[`${requestKey}_type`];
-            const measurements = dataPoint[`${requestKey}_measurements`] || [];
+          {payload.map(
+            (
+              entry: { dataKey: string; value: number; color: string; payload: TooltipDataPoint },
+              index: number
+            ) => {
+              const requestKey = entry.dataKey;
+              const value = entry.value;
+              const minValue = dataPoint[`${requestKey}_min`] as number;
+              const maxValue = dataPoint[`${requestKey}_max`] as number;
+              const count = dataPoint[`${requestKey}_count`] as number;
+              const url = dataPoint[`${requestKey}_url`] as string;
+              const method = dataPoint[`${requestKey}_method`] as string;
+              const type = dataPoint[`${requestKey}_type`] as string;
+              const measurements =
+                (dataPoint[`${requestKey}_measurements`] as {
+                  size: number;
+                  duration: number;
+                  status: number;
+                  iteration: number;
+                  startTime: number;
+                  endTime: number;
+                }[]) || [];
 
-            if (!url) return null;
+              if (!url) return null;
 
-            let formattedValue = '';
-            let formattedMin = '';
-            let formattedMax = '';
+              let formattedValue = '';
+              let formattedMin = '';
+              let formattedMax = '';
 
-            if (viewType === 'latency') {
-              formattedValue = formatDuration(value);
-              formattedMin = formatDuration(minValue);
-              formattedMax = formatDuration(maxValue);
-            } else if (viewType === 'size') {
-              formattedValue = formatBytes(value);
-              formattedMin = formatBytes(minValue);
-              formattedMax = formatBytes(maxValue);
-            } else {
-              formattedValue = value.toString();
-              formattedMin = minValue.toString();
-              formattedMax = maxValue.toString();
-            }
+              if (viewType === 'latency') {
+                formattedValue = formatDuration(value);
+                formattedMin = formatDuration(minValue);
+                formattedMax = formatDuration(maxValue);
+              } else if (viewType === 'size') {
+                formattedValue = formatBytes(value);
+                formattedMin = formatBytes(minValue);
+                formattedMax = formatBytes(maxValue);
+              } else {
+                formattedValue = value.toString();
+                formattedMin = minValue.toString();
+                formattedMax = maxValue.toString();
+              }
 
-            // Calculate average size from measurements
-            const avgSize =
-              measurements.length > 0
-                ? formatBytes(
-                    measurements.reduce((sum: number, m: any) => sum + m.size, 0) /
-                      measurements.length
-                  )
-                : 'N/A';
+              // Calculate average size from measurements
+              const avgSize =
+                measurements.length > 0
+                  ? formatBytes(
+                      measurements.reduce((sum: number, m: { size: number }) => sum + m.size, 0) /
+                        measurements.length
+                    )
+                  : 'N/A';
 
-            return (
-              <div key={index} className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-3 h-3 rounded" style={{ backgroundColor: entry.color }} />
-                  <span className="font-medium text-gray-700 text-sm">
-                    {method} • {type.toUpperCase()}
-                  </span>
-                </div>
-
-                <div className="text-xs text-gray-600 mb-2 break-all" title={url}>
-                  <strong>URL:</strong> {url}
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-xs">
-                  <div>
-                    <strong>
-                      Mean{' '}
-                      {viewType === 'latency'
-                        ? 'Duration'
-                        : viewType === 'size'
-                          ? 'Size'
-                          : 'Status'}
-                      :
-                    </strong>
-                    <br />
-                    <span className="font-semibold text-blue-600">{formattedValue}</span>
-                  </div>
-                  <div>
-                    <strong>Range:</strong>
-                    <br />
-                    <span className="text-gray-600">
-                      {formattedMin} - {formattedMax}
+              return (
+                <div key={index} className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-3 h-3 rounded" style={{ backgroundColor: entry.color }} />
+                    <span className="font-medium text-gray-700 text-sm">
+                      {method} • {type?.toUpperCase() || 'UNKNOWN'}
                     </span>
                   </div>
-                  <div>
-                    <strong>Iterations:</strong>
-                    <br />
-                    <span className="text-gray-600">{count}</span>
+
+                  <div className="text-xs text-gray-600 mb-2 break-all" title={url || ''}>
+                    <strong>URL:</strong> {url || 'Unknown URL'}
                   </div>
-                  <div>
-                    <strong>Avg Size:</strong>
-                    <br />
-                    <span className="text-gray-600">{avgSize}</span>
+
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <strong>
+                        Mean{' '}
+                        {viewType === 'latency'
+                          ? 'Duration'
+                          : viewType === 'size'
+                            ? 'Size'
+                            : 'Status'}
+                        :
+                      </strong>
+                      <br />
+                      <span className="font-semibold text-blue-600">{formattedValue}</span>
+                    </div>
+                    <div>
+                      <strong>Range:</strong>
+                      <br />
+                      <span className="text-gray-600">
+                        {formattedMin} - {formattedMax}
+                      </span>
+                    </div>
+                    <div>
+                      <strong>Iterations:</strong>
+                      <br />
+                      <span className="text-gray-600">{count || 0}</span>
+                    </div>
+                    <div>
+                      <strong>Avg Size:</strong>
+                      <br />
+                      <span className="text-gray-600">{avgSize}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            }
+          )}
         </div>
       );
     }
@@ -150,14 +187,14 @@ export const NetworkLatencyChart: React.FC<Props> = ({
     switch (viewType) {
       case 'size':
         return (dataPoint: RequestGroupData) => {
-          const measurements = dataPoint[`${requestKey}_measurements`] as any[];
+          const measurements = dataPoint[`${requestKey}_measurements`] as { size: number }[];
           if (!measurements || measurements.length === 0) return 0;
           const sizes = measurements.map((m) => m.size);
           return sizes.reduce((a, b) => a + b, 0) / sizes.length;
         };
       case 'status':
         return (dataPoint: RequestGroupData) => {
-          const measurements = dataPoint[`${requestKey}_measurements`] as any[];
+          const measurements = dataPoint[`${requestKey}_measurements`] as { status: number }[];
           if (!measurements || measurements.length === 0) return 0;
           // Return most common status code
           const statusCounts: Record<number, number> = {};
@@ -177,7 +214,7 @@ export const NetworkLatencyChart: React.FC<Props> = ({
 
   // Prepare chart data with proper value accessors
   const chartData = data.map((dataPoint) => {
-    const result: any = {
+    const result: Record<string, unknown> = {
       ...dataPoint,
       shortLabel: `${dataPoint.contextIndex}`,
     };

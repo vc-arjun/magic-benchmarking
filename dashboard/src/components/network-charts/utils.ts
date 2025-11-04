@@ -1,4 +1,4 @@
-import { NetworkResults, NetworkRequestType } from '@/types/reports';
+import { NetworkRequestType } from '@/types/reports';
 import {
   NetworkChartDataPoint,
   NetworkContextLegendItem,
@@ -93,7 +93,7 @@ export const transformNetworkChartData = (
       url: '', // Not used for context grouping
       shortUrl: '', // Not used for context grouping
       method: '', // Not used for context grouping
-      type: 'other' as any, // Not used for context grouping
+      type: 'other' as NetworkRequestType, // Not used for context grouping
       contextLabel: formatNetworkContextLabel(contextKey),
       contextKey: contextKey,
       shortLabel: contextIndex.toString(),
@@ -158,8 +158,7 @@ export const getUniqueRequests = (
 
 // Transform data for waterfall chart using mean values
 export const transformWaterfallData = (
-  requestData: NetworkChartDataPoint[],
-  selectedIteration: number = 1
+  requestData: NetworkChartDataPoint[]
 ): WaterfallDataPoint[] => {
   const waterfallData: WaterfallDataPoint[] = [];
 
@@ -233,7 +232,7 @@ export const getRequestTypeColor = (type: NetworkRequestType): string => {
 };
 
 // Calculate statistics for a group of measurements
-export const calculateRequestStats = (measurements: any[]) => {
+export const calculateRequestStats = (measurements: { duration: number; size: number }[]) => {
   const durations = measurements.map((m) => m.duration);
   const sizes = measurements.map((m) => m.size);
 

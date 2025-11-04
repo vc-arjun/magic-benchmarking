@@ -1,5 +1,5 @@
 import React from 'react';
-import { NetworkResults } from '@/types/reports';
+import { NetworkRequestType, NetworkResults } from '@/types/reports';
 import { MultiSelectDropdown } from '../MultiSelectDropdown';
 import { NetworkFilterState } from './types';
 import { formatNetworkContextLabel } from './utils';
@@ -24,8 +24,6 @@ export const NetworkFilterControls: React.FC<Props> = ({
     ...new Set(data.results.flatMap((result) => result.requests.map((req) => req.type))),
   ];
 
-  const products = [data.product];
-
   const networks = [...new Set(data.results.map((result) => result.context.network))];
 
   const cpus = [...new Set(data.results.map((result) => result.context.cpu))];
@@ -34,20 +32,17 @@ export const NetworkFilterControls: React.FC<Props> = ({
 
   // Get available execution contexts
   const availableContexts = [
-    ...new Set(data.results.map(result => 
-      `${result.context.network}_${result.context.cpu}_${result.context.user_state}`
-    ))
+    ...new Set(
+      data.results.map(
+        (result) => `${result.context.network}_${result.context.cpu}_${result.context.user_state}`
+      )
+    ),
   ];
 
   // Prepare dropdown options
   const requestTypeOptions = requestTypes.map((type) => ({
     value: type,
     label: type.toUpperCase(),
-  }));
-
-  const productOptions = products.map((product) => ({
-    value: product,
-    label: product,
   }));
 
   const networkOptions = networks.map((network) => ({
@@ -71,7 +66,6 @@ export const NetworkFilterControls: React.FC<Props> = ({
     fullLabel: formatNetworkContextLabel(contextKey),
   }));
 
-
   return (
     <div className="bg-white p-6 shadow-lg border border-gray-200 h-full">
       <div className="flex flex-col mb-6">
@@ -94,7 +88,9 @@ export const NetworkFilterControls: React.FC<Props> = ({
             multiSelect={false}
           />
           <div className="mt-2 text-xs text-gray-600">
-            <strong>Current:</strong> {contextOptions.find(c => c.value === filters.selectedContext)?.fullLabel || 'None selected'}
+            <strong>Current:</strong>{' '}
+            {contextOptions.find((c) => c.value === filters.selectedContext)?.fullLabel ||
+              'None selected'}
           </div>
         </div>
 
@@ -104,7 +100,7 @@ export const NetworkFilterControls: React.FC<Props> = ({
           options={requestTypeOptions}
           selectedValues={filters.selectedRequestTypes}
           onChange={(values) =>
-            onFiltersChange({ ...filters, selectedRequestTypes: values as any })
+            onFiltersChange({ ...filters, selectedRequestTypes: values as NetworkRequestType[] })
           }
           placeholder="Select request types..."
         />
@@ -135,7 +131,6 @@ export const NetworkFilterControls: React.FC<Props> = ({
           onChange={(values) => onFiltersChange({ ...filters, selectedUserStates: values })}
           placeholder="Select user states..."
         />
-
       </div>
     </div>
   );

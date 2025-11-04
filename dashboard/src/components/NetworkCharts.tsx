@@ -14,40 +14,19 @@ export const NetworkCharts: React.FC<Props> = ({ data }) => {
   // Handle the case where data might not have the expected structure
   const safeData = data || { products: [] };
   const firstProduct = safeData.products?.[0];
-  const results = firstProduct?.results || [];
 
-  // Early return if no data
-  if (!firstProduct || results.length === 0) {
-    return (
-      <div className="w-full h-full flex items-center justify-center">
-        <div className="text-center py-12 text-gray-500">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-            <svg
-              className="w-8 h-8 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-              />
-            </svg>
-          </div>
-          <p className="font-medium">No network analysis data available</p>
-          <p className="text-sm mt-1">Please select a network analysis report</p>
-        </div>
-      </div>
-    );
-  }
+  // Memoize results to avoid dependency issues
+  const results = useMemo(() => firstProduct?.results || [], [firstProduct]);
 
   // Get available execution contexts
   const availableContexts = useMemo(() => {
-    const contexts = [...new Set(results.map(result => 
-      `${result.context.network}_${result.context.cpu}_${result.context.user_state}`
-    ))];
+    const contexts = [
+      ...new Set(
+        results.map(
+          (result) => `${result.context.network}_${result.context.cpu}_${result.context.user_state}`
+        )
+      ),
+    ];
     return contexts;
   }, [results]);
 
@@ -146,12 +125,38 @@ export const NetworkCharts: React.FC<Props> = ({ data }) => {
 
   // Transform data for waterfall chart
   const waterfallData = useMemo(() => {
-    return transformWaterfallData(flatFilteredData, availableIterations[0] || 1);
-  }, [flatFilteredData, availableIterations]);
+    return transformWaterfallData(flatFilteredData);
+  }, [flatFilteredData]);
+
+  // Early return if no data - moved after all hooks
+  if (!firstProduct || results.length === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <div className="text-center py-12 text-gray-500">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+            <svg
+              className="w-8 h-8 text-gray-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
+            </svg>
+          </div>
+          <p className="font-medium">No network analysis data available</p>
+          <p className="text-sm mt-1">Please select a network analysis report</p>
+        </div>
+      </div>
+    );
+  }
 
   const totalRequests = Object.keys(filteredData).length;
   const totalProducts = filters.selectedProducts.length;
-
 
   const renderWaterfallSection = () => {
     if (flatFilteredData.length === 0) {
@@ -189,7 +194,6 @@ export const NetworkCharts: React.FC<Props> = ({ data }) => {
       />
     );
   };
-
 
   return (
     <div className="w-full grid grid-cols-[1fr,4fr] h-full">

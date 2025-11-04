@@ -2,6 +2,7 @@
   "name": "magic-performance-benchmarking",
   "version": "1.0.0",
   "description": "Performance benchmarking framework for Magic Checkout using Playwright",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

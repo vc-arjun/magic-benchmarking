@@ -1,7 +1,7 @@
 import React from 'react';
 import { NetworkResults } from '@/types/reports';
 import { NetworkChartDataPoint, NetworkFilterState } from './types';
-import { formatDuration, formatBytes, calculateRequestStats } from './utils';
+import { formatDuration, formatBytes } from './utils';
 
 interface Props {
   data: NetworkResults;
@@ -9,7 +9,7 @@ interface Props {
   filters: NetworkFilterState;
 }
 
-export const NetworkSummary: React.FC<Props> = ({ data, filteredData, filters }) => {
+export const NetworkSummary: React.FC<Props> = ({ filteredData }) => {
   // Calculate overall statistics
   const allRequests = Object.values(filteredData).flat();
   const totalRequests = allRequests.length;
@@ -151,7 +151,10 @@ export const NetworkSummary: React.FC<Props> = ({ data, filteredData, filters })
   });
 
   // Get top 3 requests for each category by type
-  const getTop3ByType = (requests: typeof allRequests, sortFn: (a: any, b: any) => number) => {
+  const getTop3ByType = (
+    requests: typeof allRequests,
+    sortFn: (a: NetworkChartDataPoint, b: NetworkChartDataPoint) => number
+  ) => {
     const byType: Record<string, typeof allRequests> = {};
 
     requests.forEach((req) => {

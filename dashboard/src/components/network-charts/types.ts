@@ -59,7 +59,7 @@ export interface RequestGroupData {
   contextKey: string;
   shortLabel: string;
   contextIndex: number;
-  [productName: string]: string | number | any[]; // Dynamic product data
+  [productName: string]: string | number | unknown[]; // Dynamic product data
 }
 
 export interface NetworkContextLegendItem {
