@@ -83,7 +83,6 @@ export const NetworkFilterControls: React.FC<Props> = ({
   const chartTypeOptions = [
     { value: 'bar', label: 'Bar Chart' },
     { value: 'line', label: 'Line Chart' },
-    { value: 'waterfall', label: 'Waterfall Chart' },
   ];
 
   const viewTypeOptions = [
@@ -109,7 +108,7 @@ export const NetworkFilterControls: React.FC<Props> = ({
           options={chartTypeOptions}
           selectedValues={[filters.chartType]}
           onChange={(values) =>
-            onFiltersChange({ ...filters, chartType: values[0] as 'bar' | 'line' | 'waterfall' })
+            onFiltersChange({ ...filters, chartType: values[0] as 'bar' | 'line' })
           }
           placeholder="Select chart type..."
           multiSelect={false}
@@ -134,15 +133,6 @@ export const NetworkFilterControls: React.FC<Props> = ({
           selectedValues={filters.selectedRequestTypes}
           onChange={(values) => onFiltersChange({ ...filters, selectedRequestTypes: values as any })}
           placeholder="Select request types..."
-        />
-
-        {/* Product Selector */}
-        <MultiSelectDropdown
-          label="Products"
-          options={productOptions}
-          selectedValues={filters.selectedProducts}
-          onChange={(values) => onFiltersChange({ ...filters, selectedProducts: values })}
-          placeholder="Select products..."
         />
 
         {/* Network Selector */}
@@ -171,6 +161,21 @@ export const NetworkFilterControls: React.FC<Props> = ({
           onChange={(values) => onFiltersChange({ ...filters, selectedUserStates: values })}
           placeholder="Select user states..."
         />
+
+        {/* URL Selector for Comparison */}
+        <div className="border-t border-gray-200 pt-4 mt-4">
+          <div className="mb-2">
+            <h4 className="text-sm font-semibold text-gray-800">Performance Comparison</h4>
+            <p className="text-xs text-gray-600">Select specific requests to compare</p>
+          </div>
+          <MultiSelectDropdown
+            label="Select URLs to Compare"
+            options={urlOptions}
+            selectedValues={filters.selectedUrls}
+            onChange={(values) => onFiltersChange({ ...filters, selectedUrls: values })}
+            placeholder="Choose requests for comparison..."
+          />
+        </div>
       </div>
     </div>
   );

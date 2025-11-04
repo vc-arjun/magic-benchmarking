@@ -50,7 +50,8 @@ export const NetworkCharts: React.FC<Props> = ({ data }) => {
     selectedNetworks: [...new Set(results.map(result => result.context?.network).filter(Boolean))],
     selectedCpus: [...new Set(results.map(result => result.context?.cpu).filter(Boolean))],
     selectedUserStates: [...new Set(results.map(result => result.context?.user_state).filter(Boolean))],
-    chartType: 'bar',
+    selectedUrls: [], // This will be used for comparison section
+    chartType: 'line', // Default to line chart for better comparison
     viewType: 'latency',
   });
 
@@ -139,24 +140,25 @@ export const NetworkCharts: React.FC<Props> = ({ data }) => {
   const totalRequests = Object.keys(filteredData).length;
   const totalProducts = filters.selectedProducts.length;
 
-  const renderChart = () => {
+  // Filter data for comparison section (only selected URLs)
+  const comparisonData = useMemo(() => {
+    if (filters.selectedUrls.length === 0) {
+      return [];
+    }
+    
+    return flatFilteredData.filter(point => 
+      filters.selectedUrls.includes(point.url)
+    );
+  }, [flatFilteredData, filters.selectedUrls]);
+
+  const renderWaterfallSection = () => {
     if (flatFilteredData.length === 0) {
       return (
         <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
           <div className="text-center py-12 text-gray-500">
             <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
             <p className="font-medium">No network data available</p>
@@ -166,30 +168,43 @@ export const NetworkCharts: React.FC<Props> = ({ data }) => {
       );
     }
 
-    const { groupedData, contextLegend } = transformNetworkChartData(flatFilteredData);
-    const products = [...new Set(flatFilteredData.map((d) => d.product))];
+    return (
+      <NetworkWaterfallChart
+        data={waterfallData}
+        availableIterations={availableIterations}
+        requestData={flatFilteredData}
+      />
+    );
+  };
 
-    switch (filters.chartType) {
-      case 'waterfall':
-        return (
-          <NetworkWaterfallChart
-            data={waterfallData}
-            availableIterations={availableIterations}
-          />
-        );
-      case 'line':
-      case 'bar':
-      default:
-        return (
-          <NetworkLatencyChart
-            data={groupedData}
-            products={products}
-            contextLegend={contextLegend}
-            chartType={filters.chartType}
-            viewType={filters.viewType}
-          />
-        );
+  const renderComparisonSection = () => {
+    if (comparisonData.length === 0) {
+      return (
+        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+          <div className="text-center py-12 text-gray-500">
+            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="font-medium">No requests selected for comparison</p>
+            <p className="text-sm mt-1">Select specific URLs from the filter panel to compare their performance</p>
+          </div>
+        </div>
+      );
     }
+
+    const { groupedData, contextLegend } = transformNetworkChartData(comparisonData);
+
+    return (
+      <NetworkLatencyChart
+        data={groupedData}
+        requestData={comparisonData}
+        contextLegend={contextLegend}
+        chartType={filters.chartType}
+        viewType={filters.viewType}
+      />
+    );
   };
 
   return (
@@ -203,37 +218,58 @@ export const NetworkCharts: React.FC<Props> = ({ data }) => {
         totalProducts={totalProducts}
       />
 
-      <div className="flex flex-col w-full gap-4 overflow-y-auto p-4 h-[calc(100vh-5.5rem)]">
-        {/* Charts */}
-        <div className="space-y-8">
-          <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow">
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xl font-semibold text-gray-800">
-                  Network Request Analysis
-                </h3>
-                <div className="flex items-center space-x-2">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {totalRequests} {totalRequests === 1 ? 'request type' : 'request types'}
-                  </span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                    {flatFilteredData.length} {flatFilteredData.length === 1 ? 'data point' : 'data points'}
-                  </span>
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                    {filters.viewType}
-                  </span>
-                </div>
+      <div className="flex flex-col w-full gap-6 overflow-y-auto p-4 h-[calc(100vh-5.5rem)]">
+        {/* Waterfall Section - All Requests */}
+        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow">
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xl font-semibold text-gray-800">
+                Request Timeline - By Execution Context
+              </h3>
+              <div className="flex items-center space-x-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                  {totalRequests} {totalRequests === 1 ? 'request type' : 'request types'}
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                  {flatFilteredData.length} {flatFilteredData.length === 1 ? 'data point' : 'data points'}
+                </span>
               </div>
-              <p className="text-gray-600 text-sm leading-relaxed">
-                {filters.chartType === 'waterfall' 
-                  ? 'Timeline visualization showing request dependencies and execution order'
-                  : `${filters.viewType === 'latency' ? 'Request duration' : filters.viewType === 'size' ? 'Response size' : 'Status code'} analysis across different network conditions`
-                }
-              </p>
             </div>
-            <div className="bg-gray-50 rounded-lg p-4">
-              {renderChart()}
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Timeline visualization showing network requests for a selected execution context. Use the dropdown to switch between different network/CPU/user state combinations.
+            </p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4">
+            {renderWaterfallSection()}
+          </div>
+        </div>
+
+        {/* Comparison Section - Selected Requests */}
+        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow">
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-xl font-semibold text-gray-800">
+                Performance Comparison - Selected Requests
+              </h3>
+              <div className="flex items-center space-x-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                  {filters.selectedUrls.length} selected
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                  {filters.viewType}
+                </span>
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                  {filters.chartType}
+                </span>
+              </div>
             </div>
+            <p className="text-gray-600 text-sm leading-relaxed">
+              Compare performance of selected requests across different execution contexts. 
+              {filters.selectedUrls.length === 0 && " Select URLs from the filter panel to start comparing."}
+            </p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4">
+            {renderComparisonSection()}
           </div>
         </div>
 

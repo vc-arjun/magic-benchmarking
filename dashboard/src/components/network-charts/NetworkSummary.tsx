@@ -228,7 +228,16 @@ export const NetworkSummary: React.FC<Props> = ({ data, filteredData, filters })
             <div className="font-medium text-red-700">
               {formatDuration(slowestRequest.max)}
             </div>
-            <div className="text-red-600 truncate" title={slowestRequest.url}>
+            <div 
+              className="text-red-600 cursor-help break-all text-xs" 
+              title={`Full URL: ${slowestRequest.url}`}
+              style={{ 
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }}
+            >
               {slowestRequest.url}
             </div>
             <div className="text-red-500 text-xs">
@@ -243,7 +252,16 @@ export const NetworkSummary: React.FC<Props> = ({ data, filteredData, filters })
             <div className="font-medium text-yellow-700">
               {formatBytes(Math.max(...largestRequest.measurements.map(m => m.size)))}
             </div>
-            <div className="text-yellow-600 truncate" title={largestRequest.url}>
+            <div 
+              className="text-yellow-600 cursor-help break-all text-xs" 
+              title={`Full URL: ${largestRequest.url}`}
+              style={{ 
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden'
+              }}
+            >
               {largestRequest.url}
             </div>
             <div className="text-yellow-500 text-xs">

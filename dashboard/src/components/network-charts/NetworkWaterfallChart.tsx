@@ -1,24 +1,140 @@
-import React, { useState } from 'react';
-import { WaterfallDataPoint } from './types';
-import { formatDuration, formatBytes } from './utils';
+import React, { useState, useMemo } from 'react';
+import { WaterfallDataPoint, NetworkChartDataPoint } from './types';
+import { formatDuration, formatBytes, formatNetworkContextLabel } from './utils';
+import { MultiSelectDropdown } from '../MultiSelectDropdown';
 
 interface Props {
   data: WaterfallDataPoint[];
   availableIterations: number[];
+  requestData: NetworkChartDataPoint[];
 }
 
-export const NetworkWaterfallChart: React.FC<Props> = ({ data, availableIterations }) => {
-  const [selectedIteration, setSelectedIteration] = useState(availableIterations[0] || 1);
+export const NetworkWaterfallChart: React.FC<Props> = ({ data, availableIterations, requestData }) => {
   const [hoveredRequest, setHoveredRequest] = useState<string | null>(null);
+  
+  // Get available execution contexts
+  const availableContexts = useMemo(() => {
+    const contexts = [...new Set(requestData.map(req => req.contextKey))];
+    return contexts.map(contextKey => ({
+      value: contextKey,
+      label: contextKey.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+      fullLabel: formatNetworkContextLabel(contextKey),
+    }));
+  }, [requestData]);
 
-  // Filter data for selected iteration
-  const iterationData = data.filter(d => d.iteration === selectedIteration);
+  const [selectedContext, setSelectedContext] = useState<string>(availableContexts[0]?.value || '');
+
+  // Filter data by selected context and recalculate waterfall data
+  const contextFilteredData = useMemo(() => {
+    if (!selectedContext) return data;
+    
+    // Get requests for the selected context
+    const contextRequests = requestData.filter(req => req.contextKey === selectedContext);
+    
+    // Transform context-specific requests into waterfall data
+    const waterfallData: WaterfallDataPoint[] = [];
+    
+    contextRequests.forEach((request, index) => {
+      const measurements = request.measurements;
+      if (measurements.length === 0) return;
+      
+      const meanStartTime = measurements.reduce((sum, m) => sum + m.startTime, 0) / measurements.length;
+      const meanDuration = request.mean;
+      const meanEndTime = meanStartTime + meanDuration;
+      const meanSize = measurements.reduce((sum, m) => sum + m.size, 0) / measurements.length;
+      
+      // Get most common status code
+      const statusCounts: Record<number, number> = {};
+      measurements.forEach(m => {
+        statusCounts[m.status] = (statusCounts[m.status] || 0) + 1;
+      });
+      const mostCommonStatus = parseInt(
+        Object.keys(statusCounts).reduce((a, b) => 
+          statusCounts[parseInt(a)] > statusCounts[parseInt(b)] ? a : b
+        )
+      );
+
+      const urlObj = new URL(request.url);
+      const shortUrl = `${urlObj.hostname}${urlObj.pathname}`;
+
+      waterfallData.push({
+        id: `${index}`,
+        url: request.url,
+        shortUrl: shortUrl.length > 40 ? `${shortUrl.substring(0, 37)}...` : shortUrl,
+        type: request.type,
+        method: request.method,
+        startTime: meanStartTime,
+        duration: meanDuration,
+        endTime: meanEndTime,
+        status: mostCommonStatus,
+        size: meanSize,
+        iteration: 0,
+        level: 0,
+        color: (() => {
+          const colors: Record<string, string> = {
+            document: '#8884d8',
+            script: '#82ca9d',
+            stylesheet: '#ffc658',
+            image: '#ff7300',
+            font: '#00ff00',
+            xhr: '#ff00ff',
+            fetch: '#00ffff',
+            other: '#ff0000',
+          };
+          return colors[request.type] || '#666666';
+        })(),
+      });
+    });
+    
+    // Sort by start time for waterfall display
+    return waterfallData.sort((a, b) => a.startTime - b.startTime);
+  }, [data, selectedContext, requestData]);
+
+  // Use context-filtered data
+  const iterationData = contextFilteredData;
+
+  // Handle empty data case
+  if (iterationData.length === 0) {
+    return (
+      <div className="w-full">
+        {/* Controls */}
+        <div className="mb-6 flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            {/* Context Selector */}
+            <div className="min-w-64">
+              <MultiSelectDropdown
+                label="Execution Context"
+                options={availableContexts}
+                selectedValues={[selectedContext]}
+                onChange={(values) => setSelectedContext(values[0] || availableContexts[0]?.value || '')}
+                placeholder="Select execution context..."
+                multiSelect={false}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Empty State */}
+        <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+          <div className="text-center py-12 text-gray-500">
+            <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <p className="font-medium">No requests found for selected context</p>
+            <p className="text-sm mt-1">Try selecting a different execution context</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Calculate chart dimensions
-  const minStartTime = Math.min(...iterationData.map(d => d.startTime));
-  const maxEndTime = Math.max(...iterationData.map(d => d.endTime));
+  const minStartTime = Math.min(...iterationData.map((d) => d.startTime));
+  const maxEndTime = Math.max(...iterationData.map((d) => d.endTime));
   const totalDuration = maxEndTime - minStartTime;
-  
+
   const chartWidth = 800;
   const rowHeight = 40;
   const chartHeight = iterationData.length * rowHeight + 60; // Extra space for headers
@@ -33,47 +149,64 @@ export const NetworkWaterfallChart: React.FC<Props> = ({ data, availableIteratio
   };
 
   // Group requests by type for legend
-  const requestTypes = [...new Set(iterationData.map(d => d.type))];
+  const requestTypes = [...new Set(iterationData.map((d) => d.type))];
 
   return (
     <div className="w-full">
       {/* Controls */}
-      <div className="mb-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <label className="text-sm font-medium text-gray-700">
-            Iteration:
-            <select
-              value={selectedIteration}
-              onChange={(e) => setSelectedIteration(parseInt(e.target.value))}
-              className="ml-2 px-3 py-1 border border-gray-300 rounded-md text-sm"
-            >
-              {availableIterations.map(iteration => (
-                <option key={iteration} value={iteration}>
-                  {iteration}
-                </option>
-              ))}
-            </select>
-          </label>
+      <div className="mb-6 space-y-4">
+        {/* Context Selector Row */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-64">
+            <MultiSelectDropdown
+              label="Execution Context"
+              options={availableContexts}
+              selectedValues={[selectedContext]}
+              onChange={(values) => setSelectedContext(values[0] || availableContexts[0]?.value || '')}
+              placeholder="Select execution context..."
+              multiSelect={false}
+            />
+          </div>
           
-          <div className="text-sm text-gray-600">
-            Total Duration: {formatDuration(totalDuration)}
+          {/* Current Context Display */}
+          <div className="px-4 py-2 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="text-xs text-blue-600 font-medium">Current Context</div>
+            <div className="text-xs text-blue-800 whitespace-pre-line">
+              {availableContexts.find(c => c.value === selectedContext)?.fullLabel || selectedContext}
+            </div>
           </div>
         </div>
 
-        {/* Legend */}
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-gray-700">Request Types:</span>
-          {requestTypes.map(type => (
-            <div key={type} className="flex items-center gap-1">
-              <div
-                className="w-3 h-3 rounded"
-                style={{ 
-                  backgroundColor: iterationData.find(d => d.type === type)?.color || '#666666' 
-                }}
-              />
-              <span className="text-xs text-gray-600">{type.toUpperCase()}</span>
+        {/* Statistics and Legend Row */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">Total Duration:</span> {formatDuration(totalDuration)}
             </div>
-          ))}
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">Requests:</span> {iterationData.length}
+            </div>
+            <div className="text-sm text-gray-600">
+              <span className="font-medium">Data:</span> Mean values across{' '}
+              {availableIterations.length} iterations
+            </div>
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium text-gray-700">Request Types:</span>
+            {requestTypes.map((type) => (
+              <div key={type} className="flex items-center gap-1">
+                <div
+                  className="w-3 h-3 rounded"
+                  style={{
+                    backgroundColor: iterationData.find((d) => d.type === type)?.color || '#666666',
+                  }}
+                />
+                <span className="text-xs text-gray-600">{type.toUpperCase()}</span>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -124,8 +257,19 @@ export const NetworkWaterfallChart: React.FC<Props> = ({ data, availableIteratio
                   onMouseLeave={() => setHoveredRequest(null)}
                 >
                   {/* URL label */}
-                  <div className="w-80 px-3 py-2 text-xs text-gray-700 truncate border-r border-gray-200">
-                    <div className="font-medium">{request.shortUrl}</div>
+                  <div className="w-80 px-3 py-2 text-xs text-gray-700 border-r border-gray-200">
+                    <div
+                      className="font-medium cursor-help break-all"
+                      title={`Full URL: ${request.url}`}
+                      style={{
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {request.shortUrl}
+                    </div>
                     <div className="text-gray-500">
                       {request.method} • {request.type.toUpperCase()}
                     </div>
@@ -149,50 +293,39 @@ export const NetworkWaterfallChart: React.FC<Props> = ({ data, availableIteratio
                     {/* Hover tooltip */}
                     {isHovered && (
                       <div
-                        className="absolute z-10 bg-black text-white text-xs rounded px-2 py-1 pointer-events-none"
+                        className="absolute z-10 bg-black text-white text-[10px] rounded px-3 py-2 pointer-events-none max-w-xs"
                         style={{
                           left: `${(xPosition / chartWidth) * 100}%`,
-                          top: -30,
+                          top: -20,
                           transform: 'translateX(-50%)',
                         }}
                       >
-                        <div>Duration: {formatDuration(request.duration)}</div>
-                        <div>Size: {formatBytes(request.size)}</div>
-                        <div>Status: {request.status}</div>
-                        <div>Start: {formatDuration(request.startTime)}</div>
+                        <div className=" pt-1 space-y-1">
+                          <div>
+                            <strong>Method:</strong> {request.method}
+                          </div>
+                          <div>
+                            <strong>Type:</strong> {request.type.toUpperCase()}
+                          </div>
+                          <div>
+                            <strong>Duration:</strong> {formatDuration(request.duration)}
+                          </div>
+                          <div>
+                            <strong>Size:</strong> {formatBytes(request.size)}
+                          </div>
+                          <div>
+                            <strong>Start Time:</strong> {formatDuration(request.startTime)}
+                          </div>
+                          <div>
+                            <strong>Status:</strong> {request.status}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
                 </div>
               );
             })}
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Statistics */}
-      <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <div className="text-sm font-medium text-blue-900">Total Requests</div>
-          <div className="text-2xl font-bold text-blue-700">{iterationData.length}</div>
-        </div>
-        
-        <div className="bg-green-50 p-4 rounded-lg">
-          <div className="text-sm font-medium text-green-900">Total Duration</div>
-          <div className="text-2xl font-bold text-green-700">{formatDuration(totalDuration)}</div>
-        </div>
-        
-        <div className="bg-purple-50 p-4 rounded-lg">
-          <div className="text-sm font-medium text-purple-900">Avg Duration</div>
-          <div className="text-2xl font-bold text-purple-700">
-            {formatDuration(iterationData.reduce((sum, req) => sum + req.duration, 0) / iterationData.length)}
-          </div>
-        </div>
-        
-        <div className="bg-orange-50 p-4 rounded-lg">
-          <div className="text-sm font-medium text-orange-900">Total Size</div>
-          <div className="text-2xl font-bold text-orange-700">
-            {formatBytes(iterationData.reduce((sum, req) => sum + req.size, 0))}
           </div>
         </div>
       </div>
@@ -218,9 +351,6 @@ export const NetworkWaterfallChart: React.FC<Props> = ({ data, availableIteratio
                     Size
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Start Time
                   </th>
                 </tr>
@@ -228,9 +358,11 @@ export const NetworkWaterfallChart: React.FC<Props> = ({ data, availableIteratio
               <tbody className="bg-white divide-y divide-gray-200">
                 {iterationData.map((request) => (
                   <tr key={request.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <div className="max-w-xs truncate" title={request.url}>
-                        {request.shortUrl}
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      <div
+                        className="max-w-xs cursor-help break-all"
+                      >
+                        {request.url}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -243,17 +375,6 @@ export const NetworkWaterfallChart: React.FC<Props> = ({ data, availableIteratio
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatBytes(request.size)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        request.status >= 200 && request.status < 300
-                          ? 'bg-green-100 text-green-800'
-                          : request.status >= 300 && request.status < 400
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {request.status}
-                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDuration(request.startTime)}

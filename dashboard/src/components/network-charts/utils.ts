@@ -64,58 +64,94 @@ export const createNetworkContextLegend = (
   }));
 };
 
-// Transform network data for chart visualization
+// Transform network data for chart visualization - request-wise grouping
 export const transformNetworkChartData = (
   requestData: NetworkChartDataPoint[]
 ): { groupedData: RequestGroupData[]; contextLegend: NetworkContextLegendItem[] } => {
   // Create context legend
   const contextLegend = createNetworkContextLegend(requestData);
 
-  // Group data by URL and context for better visualization
-  const groupedData = requestData.reduce((acc, point) => {
-    const key = `${point.url}_${point.contextKey}`;
-    const existing = acc.find((item) => 
-      item.url === point.url && item.contextKey === point.contextKey
-    );
-    
-    if (existing) {
-      existing[point.product] = point.mean;
-      existing[`${point.product}_min`] = point.min;
-      existing[`${point.product}_max`] = point.max;
-      existing[`${point.product}_count`] = point.count;
-      existing[`${point.product}_measurements`] = point.measurements;
-    } else {
-      // Find the index for this context
-      const contextIndex =
-        contextLegend.find((legend) => legend.contextKey === point.contextKey)?.index || 1;
-
-      // Create short URL for display
-      const urlObj = new URL(point.url);
-      const shortUrl = `${urlObj.hostname}${urlObj.pathname}`;
-
-      acc.push({
-        url: point.url,
-        shortUrl: shortUrl.length > 50 ? `${shortUrl.substring(0, 47)}...` : shortUrl,
-        method: point.method,
-        type: point.type,
-        contextLabel: formatNetworkContextLabel(point.contextKey),
-        contextKey: point.contextKey,
-        shortLabel: contextIndex.toString(),
-        contextIndex: contextIndex,
-        [point.product]: point.mean,
-        [`${point.product}_min`]: point.min,
-        [`${point.product}_max`]: point.max,
-        [`${point.product}_count`]: point.count,
-        [`${point.product}_measurements`]: point.measurements,
-      });
+  // Group data by context (execution environment) for x-axis
+  const contextGroups = requestData.reduce((acc, point) => {
+    if (!acc[point.contextKey]) {
+      acc[point.contextKey] = [];
     }
+    acc[point.contextKey].push(point);
     return acc;
-  }, [] as RequestGroupData[]);
+  }, {} as Record<string, NetworkChartDataPoint[]>);
+
+  // Create grouped data with each context as a data point and each request as a separate series
+  const groupedData = Object.entries(contextGroups).map(([contextKey, points]) => {
+    // Find the index for this context
+    const contextIndex =
+      contextLegend.find((legend) => legend.contextKey === contextKey)?.index || 1;
+
+    const dataPoint: RequestGroupData = {
+      url: '', // Not used for context grouping
+      shortUrl: '', // Not used for context grouping
+      method: '', // Not used for context grouping
+      type: 'other' as any, // Not used for context grouping
+      contextLabel: formatNetworkContextLabel(contextKey),
+      contextKey: contextKey,
+      shortLabel: contextIndex.toString(),
+      contextIndex: contextIndex,
+    };
+
+    // Add each request as a separate field in the data point
+    points.forEach((point) => {
+      const requestKey = createRequestKey(point.url, point.method, point.type);
+      dataPoint[requestKey] = point.mean;
+      dataPoint[`${requestKey}_min`] = point.min;
+      dataPoint[`${requestKey}_max`] = point.max;
+      dataPoint[`${requestKey}_count`] = point.count;
+      dataPoint[`${requestKey}_measurements`] = point.measurements;
+      dataPoint[`${requestKey}_url`] = point.url;
+      dataPoint[`${requestKey}_method`] = point.method;
+      dataPoint[`${requestKey}_type`] = point.type;
+    });
+
+    return dataPoint;
+  });
 
   return { groupedData, contextLegend };
 };
 
-// Transform data for waterfall chart
+// Create a unique key for each request
+export const createRequestKey = (url: string, method: string, type: string): string => {
+  const urlObj = new URL(url);
+  const shortUrl = `${urlObj.hostname}${urlObj.pathname}`;
+  return `${method}_${type}_${shortUrl}`.replace(/[^a-zA-Z0-9_]/g, '_');
+};
+
+// Get all unique requests from the data
+export const getUniqueRequests = (requestData: NetworkChartDataPoint[]): Array<{
+  key: string;
+  url: string;
+  method: string;
+  type: string;
+  shortUrl: string;
+}> => {
+  const uniqueRequests = new Map();
+  
+  requestData.forEach((point) => {
+    const key = createRequestKey(point.url, point.method, point.type);
+    if (!uniqueRequests.has(key)) {
+      const urlObj = new URL(point.url);
+      const shortUrl = `${urlObj.hostname}${urlObj.pathname}`;
+      uniqueRequests.set(key, {
+        key,
+        url: point.url,
+        method: point.method,
+        type: point.type,
+        shortUrl: shortUrl.length > 40 ? `${shortUrl.substring(0, 37)}...` : shortUrl,
+      });
+    }
+  });
+  
+  return Array.from(uniqueRequests.values());
+};
+
+// Transform data for waterfall chart using mean values
 export const transformWaterfallData = (
   requestData: NetworkChartDataPoint[],
   selectedIteration: number = 1
@@ -123,31 +159,44 @@ export const transformWaterfallData = (
   const waterfallData: WaterfallDataPoint[] = [];
   
   requestData.forEach((request, index) => {
-    // Find measurements for the selected iteration
-    const iterationMeasurements = request.measurements.filter(
-      m => m.iteration === selectedIteration
-    );
+    // Calculate mean values from all measurements
+    const measurements = request.measurements;
+    if (measurements.length === 0) return;
     
-    iterationMeasurements.forEach((measurement, measurementIndex) => {
-      waterfallData.push({
-        id: `${index}_${measurementIndex}`,
-        url: request.url,
-        shortUrl: (() => {
-          const urlObj = new URL(request.url);
-          const shortUrl = `${urlObj.hostname}${urlObj.pathname}`;
-          return shortUrl.length > 40 ? `${shortUrl.substring(0, 37)}...` : shortUrl;
-        })(),
-        type: request.type,
-        method: request.method,
-        startTime: measurement.startTime,
-        duration: measurement.duration,
-        endTime: measurement.endTime,
-        status: measurement.status,
-        size: measurement.size,
-        iteration: measurement.iteration,
-        level: 0, // Will be calculated based on dependencies
-        color: REQUEST_TYPE_COLORS[request.type] || '#666666',
-      });
+    const meanStartTime = measurements.reduce((sum, m) => sum + m.startTime, 0) / measurements.length;
+    const meanDuration = request.mean; // Already calculated
+    const meanEndTime = meanStartTime + meanDuration;
+    const meanSize = measurements.reduce((sum, m) => sum + m.size, 0) / measurements.length;
+    
+    // Get most common status code
+    const statusCounts: Record<number, number> = {};
+    measurements.forEach(m => {
+      statusCounts[m.status] = (statusCounts[m.status] || 0) + 1;
+    });
+    const mostCommonStatus = parseInt(
+      Object.keys(statusCounts).reduce((a, b) => 
+        statusCounts[parseInt(a)] > statusCounts[parseInt(b)] ? a : b
+      )
+    );
+
+    waterfallData.push({
+      id: `${index}`,
+      url: request.url,
+      shortUrl: (() => {
+        const urlObj = new URL(request.url);
+        const shortUrl = `${urlObj.hostname}${urlObj.pathname}`;
+        return shortUrl.length > 40 ? `${shortUrl.substring(0, 37)}...` : shortUrl;
+      })(),
+      type: request.type,
+      method: request.method,
+      startTime: meanStartTime,
+      duration: meanDuration,
+      endTime: meanEndTime,
+      status: mostCommonStatus,
+      size: meanSize,
+      iteration: 0, // Not applicable for mean values
+      level: 0, // Will be calculated based on dependencies
+      color: REQUEST_TYPE_COLORS[request.type] || '#666666',
     });
   });
 

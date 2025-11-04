@@ -133,7 +133,7 @@ const Dashboard = () => {
               </div>
               <div>
                 <h2 className="text-3xl font-bold text-gray-800">Network Reports</h2>
-                <p className="text-gray-600 font-medium">Request analysis and network behavior</p>
+                <p className="text-gray-600 font-medium">Request analysis and network behavior of Magic Checkout</p>
               </div>
             </div>
 

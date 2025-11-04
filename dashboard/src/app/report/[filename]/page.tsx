@@ -9,7 +9,7 @@ import { Error } from '@/components/Error';
 import { PerformanceCharts } from '@/components/PerformanceCharts';
 import { NetworkCharts } from '@/components/NetworkCharts';
 import { timeToReadable } from '@/utils';
-import { BenchmarkResults, NetworkResults } from '@/types/reports';
+import { BenchmarkResults, NetworkAnalysisReport } from '@/types/reports';
 
 const ReportDetail = () => {
   const params = useParams();
@@ -47,7 +47,7 @@ const ReportDetail = () => {
                   <h1 className="text-2xl font-bold text-gray-800">
                     {report?.type === 'performance'
                       ? 'Performance Report'
-                      : 'Network Analysis Report'}
+                      : 'Magic Checkout | Network Analysis Report'}
                   </h1>
                   <p className="text-gray-600">{timeToReadable(report.content.timestamp)}</p>
                 </div>
@@ -62,7 +62,7 @@ const ReportDetail = () => {
         {report.type === 'performance' ? (
           <PerformanceCharts data={report.content as BenchmarkResults} />
         ) : (
-          <NetworkCharts data={report.content as NetworkResults} />
+          <NetworkCharts data={report.content as NetworkAnalysisReport} />
         )}
       </div>
     </div>
