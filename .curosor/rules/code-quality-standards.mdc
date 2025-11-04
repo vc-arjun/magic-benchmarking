@@ -1,0 +1,433 @@
+---
+alwaysApply: true
+---
+You are an AI assistant helping with the Magic Benchmarking Framework, a performance benchmarking tool for Magic Checkout using Playwright automation and Next.js dashboard.
+
+## Project Context
+
+This is a TypeScript project with strict type safety, comprehensive error handling, structured logging, and performance optimizations. The codebase follows enterprise-grade patterns for maintainability and scalability by AI systems.
+
+## Core Architecture Principles
+
+### 1. Error Handling & Validation
+- **ALWAYS** use the custom error classes from `src/utils/errors.ts`
+- **NEVER** throw generic `Error` objects - use specific error types:
+  - `ConfigurationError` for config issues
+  - `ValidationError` for input validation failures
+  - `BrowserError` for Playwright/browser issues
+  - `PerformanceError` for performance monitoring issues
+  - `NetworkError` for network-related issues
+  - `FileSystemError` for file operations
+  - `TimeoutError` for timeout scenarios
+
+```typescript
+// ✅ CORRECT
+throw new ValidationError('Invalid configuration detected', { field: 'iterations' });
+
+// ❌ INCORRECT
+throw new Error('Invalid configuration');
+```
+
+### 2. Result Pattern Usage
+- **ALWAYS** use the `Result<T, E>` pattern for operations that can fail
+- Use `success()` and `failure()` helper functions
+- Use `safeAsync()` for wrapping async operations
+
+```typescript
+// ✅ CORRECT
+const result = await safeAsync(() => fetchData());
+if (!result.success) {
+  logger.error('Failed to fetch data', result.error);
+  return;
+}
+
+// ❌ INCORRECT
+try {
+  const data = await fetchData();
+} catch (error) {
+  console.log(error);
+}
+```
+
+### 3. Structured Logging
+- **ALWAYS** use the logger from `src/utils/logger.ts`
+- **NEVER** use `console.log` directly in production code
+- Create module-specific loggers using `createLogger(moduleName)`
+- Use appropriate log levels: `debug`, `info`, `warn`, `error`
+- Include contextual information in log messages
+
+```typescript
+// ✅ CORRECT
+const logger = createLogger('ModuleName');
+logger.info('Operation completed', { duration: 150, itemsProcessed: 42 });
+logger.error('Operation failed', error, { context: 'user-action' });
+
+// ❌ INCORRECT
+console.log('Operation completed');
+console.error(error);
+```
+
+## TypeScript Standards
+
+### 1. Strict Type Safety
+- **ALWAYS** use strict TypeScript configuration
+- **NEVER** use `any` type - use proper types or `unknown`
+- Use `| undefined` explicitly for optional properties when using `exactOptionalPropertyTypes`
+- Prefer type guards and validation over type assertions
+
+```typescript
+// ✅ CORRECT
+interface Config {
+  name: string;
+  description?: string | undefined;
+}
+
+function isString(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+// ❌ INCORRECT
+interface Config {
+  name: string;
+  description?: string;
+}
+
+const value = data as string; // Avoid type assertions
+```
+
+### 2. Function and Class Design
+- Use descriptive names that explain intent
+- Keep functions small and focused (single responsibility)
+- Use proper JSDoc comments for public APIs
+- Prefer composition over inheritance
+- Use readonly properties where appropriate
+
+```typescript
+// ✅ CORRECT
+/**
+ * Validates configuration and returns structured result
+ * @param config - Configuration object to validate
+ * @returns Validation result with errors if any
+ */
+export function validateConfiguration(config: unknown): ValidationResult<Config> {
+  // Implementation
+}
+
+// ❌ INCORRECT
+export function validate(config: any) {
+  // Implementation
+}
+```
+
+## Code Organization Patterns
+
+### 1. Utility Functions
+- **ALWAYS** check if a utility function exists before creating new ones
+- Add new utilities to appropriate files in `src/utils/`
+- Use the existing utilities for common operations:
+  - `calculateStatistics()` for numeric analysis
+  - `formatBytes()`, `formatDuration()` for formatting
+  - `deepClone()`, `groupBy()`, `unique()` for data manipulation
+  - `delay()`, `retryWithBackoff()` for async operations
+
+### 2. Validation Patterns
+- **ALWAYS** validate inputs using the validation framework
+- Use existing validators or extend them
+- Create specific error messages with context
+
+```typescript
+// ✅ CORRECT
+const result = ValidationUtils.validateConfig(input);
+if (!result.isValid) {
+  throw new ValidationError(
+    `Configuration validation failed: ${result.errors.join('; ')}`,
+    { errors: result.errors }
+  );
+}
+
+// ❌ INCORRECT
+if (!input.name) {
+  throw new Error('Name is required');
+}
+```
+
+### 3. Performance Optimization
+- Use caching mechanisms from `src/utils/cache.ts`
+- Implement memoization for expensive operations
+- Use React hooks optimization patterns in dashboard components
+
+```typescript
+// ✅ CORRECT - Use existing cache
+const cache = new MemoryCache<ProcessedData>(5 * 60 * 1000);
+const result = cache.get(key) ?? processExpensiveData(input);
+
+// ✅ CORRECT - React optimization
+const memoizedData = useMemo(() => {
+  return processChartData(rawData, filters);
+}, [rawData, filters]);
+
+// ❌ INCORRECT
+const result = processExpensiveData(input); // No caching
+```
+
+## File and Module Patterns
+
+### 1. File Structure
+- Keep related functionality together
+- Use barrel exports in index files
+- Separate types, constants, and implementation
+- Follow the established directory structure
+
+### 2. Import/Export Patterns
+```typescript
+// ✅ CORRECT - Use barrel imports
+import { ErrorHandler, ValidationError, logger } from '../utils';
+
+// ✅ CORRECT - Specific imports for large modules
+import { calculateStatistics } from '../utils/common';
+
+// ❌ INCORRECT - Direct file imports when barrel exists
+import { ErrorHandler } from '../utils/errors';
+import { ValidationError } from '../utils/errors';
+```
+
+### 3. Naming Conventions
+- Use PascalCase for classes, interfaces, types, enums
+- Use camelCase for functions, variables, properties
+- Use SCREAMING_SNAKE_CASE for constants
+- Use descriptive names that explain purpose
+
+```typescript
+// ✅ CORRECT
+export class PerformanceMonitor {
+  private currentIteration: number = 0;
+  
+  public recordMetric(metricName: InitialLoadMetrics, value: number): void {
+    // Implementation
+  }
+}
+
+export const DEFAULT_TIMEOUT = 30000;
+
+// ❌ INCORRECT
+export class PM {
+  private iter: number = 0;
+  
+  public record(name: string, val: number): void {
+    // Implementation
+  }
+}
+```
+
+## React/Next.js Dashboard Patterns
+
+### 1. Component Design
+- Use functional components with hooks
+- Implement proper error boundaries
+- Use optimized hooks for data fetching and processing
+- Implement loading states and error handling
+
+```typescript
+// ✅ CORRECT
+export const PerformanceChart: React.FC<Props> = ({ data }) => {
+  const { chartData, loading, error } = useOptimizedChartData(data);
+  
+  if (loading) return <Loading />;
+  if (error) return <Error error={error} />;
+  
+  return <Chart data={chartData} />;
+};
+
+// ❌ INCORRECT
+export const PerformanceChart = ({ data }) => {
+  const [chartData, setChartData] = useState();
+  
+  useEffect(() => {
+    setChartData(processData(data));
+  }, [data]);
+  
+  return <Chart data={chartData} />;
+};
+```
+
+### 2. Performance Optimization
+- Use `useMemo` for expensive calculations
+- Use `useCallback` for event handlers
+- Implement proper dependency arrays
+- Use caching for API responses
+
+### 3. Error Handling in Components
+- Always handle loading and error states
+- Use error boundaries for component-level errors
+- Provide meaningful error messages to users
+
+## Testing Patterns (When Applicable)
+
+Although testing was removed from this project, if tests are added later:
+
+- Use the mock data generators and utilities pattern
+- Create realistic test scenarios
+- Test error conditions and edge cases
+- Use proper assertions and expectations
+
+## Documentation Requirements
+
+### 1. Code Documentation
+- **ALWAYS** add JSDoc comments for public APIs
+- Include parameter descriptions and return types
+- Document complex algorithms and business logic
+- Add usage examples for utility functions
+
+### 2. README Updates
+- Update README when adding new features
+- Include configuration examples
+- Document new API endpoints or components
+- Add troubleshooting information
+
+## Performance and Scalability
+
+### 1. Async Operations
+- Use proper async/await patterns
+- Implement timeout handling
+- Use retry mechanisms with exponential backoff
+- Handle cancellation properly
+
+```typescript
+// ✅ CORRECT
+const result = await ErrorHandler.withRetry(
+  async () => {
+    const response = await fetch(url, { signal: abortController.signal });
+    if (!response.ok) throw new NetworkError('Request failed');
+    return response.json();
+  },
+  {
+    maxAttempts: 3,
+    delayMs: 1000,
+    shouldRetry: (error) => error instanceof NetworkError,
+  }
+);
+
+// ❌ INCORRECT
+const response = await fetch(url);
+const data = await response.json();
+```
+
+### 2. Memory Management
+- Clean up resources properly
+- Use AbortController for cancellable operations
+- Implement proper cache cleanup
+- Avoid memory leaks in React components
+
+## Security Considerations
+
+### 1. Input Sanitization
+- **ALWAYS** validate and sanitize user inputs
+- Use the validation framework for all external data
+- Sanitize strings to prevent XSS in dashboard
+
+### 2. File Operations
+- Validate file paths and names
+- Use safe file operations
+- Handle file system errors gracefully
+
+## Specific Module Guidelines
+
+### 1. Performance Monitoring (`src/performance.ts`)
+- Always validate page context before operations
+- Use structured logging for performance metrics
+- Implement proper error recovery
+- Handle browser context switches
+
+### 2. Network Monitoring (`src/network-monitor.ts`)
+- Filter requests appropriately
+- Handle request/response lifecycle properly
+- Implement proper cleanup
+- Use structured data for analysis
+
+### 3. Dashboard Components
+- Use optimized data processing hooks
+- Implement proper loading states
+- Handle empty data gracefully
+- Use consistent styling patterns
+
+## Code Review Checklist
+
+Before submitting code, ensure:
+
+- [ ] All functions have proper error handling
+- [ ] Logging is implemented with appropriate levels
+- [ ] TypeScript strict mode compliance
+- [ ] Input validation is implemented
+- [ ] Performance considerations are addressed
+- [ ] Documentation is updated
+- [ ] No console.log statements in production code
+- [ ] Proper async/await patterns are used
+- [ ] Memory leaks are prevented
+- [ ] Security considerations are addressed
+
+## Common Anti-Patterns to Avoid
+
+### ❌ Don't Do This:
+```typescript
+// Generic error throwing
+throw new Error('Something went wrong');
+
+// Console logging
+console.log('Debug info');
+
+// Unhandled promises
+fetchData(); // Missing await or error handling
+
+// Type assertions without validation
+const config = data as Config;
+
+// Blocking operations
+const result = syncOperation(); // Use async alternatives
+
+// Hardcoded values
+setTimeout(callback, 5000); // Use constants
+
+// Nested callbacks
+getData((data) => {
+  processData(data, (result) => {
+    saveResult(result, (success) => {
+      // Callback hell
+    });
+  });
+});
+```
+
+### ✅ Do This Instead:
+```typescript
+// Specific error types with context
+throw new ValidationError('Configuration validation failed', { field: 'timeout' });
+
+// Structured logging
+logger.info('Operation completed', { duration: 150, success: true });
+
+// Proper async handling
+const result = await safeAsync(() => fetchData());
+
+// Validation before type assertion
+const config = ValidationUtils.validateConfig(data);
+
+// Async operations
+const result = await asyncOperation();
+
+// Named constants
+const DEFAULT_TIMEOUT = 5000;
+setTimeout(callback, DEFAULT_TIMEOUT);
+
+// Async/await pattern
+try {
+  const data = await getData();
+  const result = await processData(data);
+  await saveResult(result);
+} catch (error) {
+  logger.error('Operation failed', error);
+}
+```
+
+---
+
+**Remember**: This codebase prioritizes maintainability, type safety, and comprehensive error handling. Always follow these patterns to ensure consistency and quality across the entire project.
