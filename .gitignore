@@ -179,6 +179,7 @@ screenshots/
 # Dashboard specific
 dashboard/dist/
 dashboard/build/
+dashboard/out/
 
 # OS generated files
 .DS_Store

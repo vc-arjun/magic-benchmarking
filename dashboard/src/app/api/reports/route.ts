@@ -14,7 +14,7 @@ export const GET = async () => {
           'utf8'
         );
         return {
-          name: file,
+          name: file.replace('.json', ''),
           content: JSON.parse(content),
           type: file.startsWith('performance-results-') ? 'performance' : 'network',
         };

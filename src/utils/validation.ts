@@ -105,7 +105,9 @@ export class ProductConfigValidator extends BaseValidator<ProductConfig> {
     if (!this.isString(pom_file) || pom_file.trim() === '') {
       errors.push('POM file must be a non-empty string');
     } else if (!pom_file.endsWith('.ts') && pom_file.includes('.')) {
-      errors.push('POM file must either be a TypeScript file (.ts extension) or a module name without extension');
+      errors.push(
+        'POM file must either be a TypeScript file (.ts extension) or a module name without extension'
+      );
     }
 
     // Validate enabled
