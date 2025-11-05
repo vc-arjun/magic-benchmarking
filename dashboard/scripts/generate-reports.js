@@ -30,9 +30,16 @@ async function generateReportsData() {
     }
 
     const files = await fs.readdir(resultsDir);
-    const filteredFiles = files.filter((file) => file.endsWith('.json'));
+    const filteredFiles = files.filter((file) => file.endsWith('.json'))
+      .sort((a, b) => {
+        // Prioritize final consolidated files from parallel execution
+        if (a.includes('final') && !b.includes('final')) return -1;
+        if (!a.includes('final') && b.includes('final')) return 1;
+        return b.localeCompare(a); // Most recent first
+      });
     
     console.log('Processing new report files:', filteredFiles);
+    console.log('Final consolidated files found:', filteredFiles.filter(f => f.includes('final')));
     
     // Process new reports
     const newReports = [];

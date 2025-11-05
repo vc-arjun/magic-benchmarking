@@ -4,9 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       iterations:
-        description: 'Number of iterations to run'
+        description: 'Number of iterations per combination (e.g., 20 iterations × 2 network conditions = 40 total)'
         required: false
         default: '20'
+        type: string
+      max_iterations_per_job:
+        description: 'Maximum iterations per parallel job (splits total across multiple jobs)'
+        required: false
+        default: '10'
         type: string
       network_slow_4g:
         description: 'Enable Slow 4G network throttling'
@@ -40,11 +45,82 @@ on:
         type: boolean
 
 jobs:
-  benchmarking:
+  # Calculate execution matrix and job distribution
+  calculate-matrix:
     if: ${{ github.event.inputs.skip_benchmarking != 'true' }}
     runs-on: ubuntu-latest
     outputs:
-      results-artifact: ${{ steps.upload-results.outputs.artifact-id }}
+      matrix: ${{ steps.calculate.outputs.matrix }}
+      total_jobs: ${{ steps.calculate.outputs.total_jobs }}
+      total_iterations: ${{ steps.calculate.outputs.total_iterations }}
+      combinations_count: ${{ steps.calculate.outputs.combinations_count }}
+    steps:
+      - name: Calculate job matrix and total iterations
+        id: calculate
+        run: |
+          # Input parameters
+          iterations_per_combo=${{ github.event.inputs.iterations }}
+          max_per_job=${{ github.event.inputs.max_iterations_per_job }}
+          
+          # Count enabled combinations
+          combinations=0
+          if [ "${{ github.event.inputs.network_slow_4g }}" = "true" ]; then
+            if [ "${{ github.event.inputs.cpu_no_throttling }}" = "true" ]; then combinations=$((combinations + 1)); fi
+            if [ "${{ github.event.inputs.cpu_4x_slowdown }}" = "true" ]; then combinations=$((combinations + 1)); fi
+          fi
+          if [ "${{ github.event.inputs.network_no_throttling }}" = "true" ]; then
+            if [ "${{ github.event.inputs.cpu_no_throttling }}" = "true" ]; then combinations=$((combinations + 1)); fi
+            if [ "${{ github.event.inputs.cpu_4x_slowdown }}" = "true" ]; then combinations=$((combinations + 1)); fi
+          fi
+          
+          # Calculate total iterations across all combinations
+          total_iterations=$((iterations_per_combo * combinations))
+          
+          echo "📊 Execution Plan:"
+          echo "  Iterations per combination: $iterations_per_combo"
+          echo "  Enabled combinations: $combinations"
+          echo "  Total iterations: $total_iterations"
+          echo "  Max iterations per job: $max_per_job"
+          
+          # Calculate number of parallel jobs needed
+          total_jobs=$(( (total_iterations + max_per_job - 1) / max_per_job ))
+          echo "  Parallel jobs needed: $total_jobs"
+          
+          # Generate job matrix
+          matrix="["
+          for i in $(seq 1 $total_jobs); do
+            start_iteration=$(( (i - 1) * max_per_job + 1 ))
+            end_iteration=$(( i * max_per_job ))
+            if [ $end_iteration -gt $total_iterations ]; then
+              end_iteration=$total_iterations
+            fi
+            actual_iterations=$(( end_iteration - start_iteration + 1 ))
+            
+            if [ $i -gt 1 ]; then
+              matrix="$matrix,"
+            fi
+            matrix="$matrix{\"job_id\":$i,\"iterations\":$actual_iterations}"
+            
+            echo "  Job $i: $actual_iterations iterations"
+          done
+          matrix="$matrix]"
+          
+          # Output for next jobs
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          echo "total_jobs=$total_jobs" >> $GITHUB_OUTPUT
+          echo "total_iterations=$total_iterations" >> $GITHUB_OUTPUT
+          echo "combinations_count=$combinations" >> $GITHUB_OUTPUT
+
+  # Run parallel benchmark jobs
+  benchmarking:
+    needs: calculate-matrix
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.calculate-matrix.outputs.matrix) }}
+      fail-fast: false
+      max-parallel: 4
     
     steps:
       - name: Checkout
@@ -74,24 +150,103 @@ jobs:
       - name: Run benchmarking
         run: npm start
         env:
-          BENCHMARK_ITERATIONS: ${{ github.event.inputs.iterations }}
+          BENCHMARK_ITERATIONS: ${{ matrix.iterations }}
+          BENCHMARK_JOB_ID: ${{ matrix.job_id }}
+          BENCHMARK_TOTAL_JOBS: ${{ needs.calculate-matrix.outputs.total_jobs }}
           BENCHMARK_NETWORK_SLOW_4G: ${{ github.event.inputs.network_slow_4g }}
           BENCHMARK_NETWORK_NO_THROTTLING: ${{ github.event.inputs.network_no_throttling }}
           BENCHMARK_CPU_4X_SLOWDOWN: ${{ github.event.inputs.cpu_4x_slowdown }}
           BENCHMARK_CPU_NO_THROTTLING: ${{ github.event.inputs.cpu_no_throttling }}
+          PLAYWRIGHT_HEADLESS: true
+          SILENT_TESTS: true
+          LOG_LEVEL: info
+
+      - name: Validate results
+        run: |
+          if [ ! -d "dashboard/public/results" ]; then
+            echo "❌ Results directory not found"
+            exit 1
+          fi
+          
+          performance_files=$(find dashboard/public/results -name "*performance-results-consolidated*.json" | wc -l)
+          if [ $performance_files -eq 0 ]; then
+            echo "❌ No performance result files found"
+            exit 1
+          fi
+          
+          echo "✅ Job ${{ matrix.job_id }} validation passed"
 
       - name: Upload benchmark results
-        id: upload-results
         uses: actions/upload-artifact@v4
         with:
-          name: benchmark-results-${{ github.run_number }}
+          name: benchmark-results-job-${{ matrix.job_id }}
+          path: dashboard/public/results/
+          retention-days: 7
+          if-no-files-found: error
+
+  # Consolidate results from all parallel jobs
+  consolidate-results:
+    needs: [calculate-matrix, benchmarking]
+    runs-on: ubuntu-latest
+    if: success()
+    outputs:
+      consolidation-successful: ${{ steps.consolidate.outputs.success }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download all benchmark results
+        uses: actions/download-artifact@v4
+        with:
+          pattern: benchmark-results-job-*
+          path: ./temp-results
+          merge-multiple: true
+
+      - name: Consolidate results
+        id: consolidate
+        run: |
+          echo "🔄 Consolidating results from ${{ needs.calculate-matrix.outputs.total_jobs }} parallel jobs..."
+          echo "📊 Total iterations processed: ${{ needs.calculate-matrix.outputs.total_iterations }}"
+          echo "🔗 Combinations tested: ${{ needs.calculate-matrix.outputs.combinations_count }}"
+          
+          node ./scripts/consolidate-results.js ./temp-results
+          
+          if [ -f "./temp-results/consolidation-summary.json" ]; then
+            echo "✅ Consolidation completed successfully"
+            echo "success=true" >> $GITHUB_OUTPUT
+          else
+            echo "❌ Consolidation failed - summary file not found"
+            echo "success=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Copy consolidated results to dashboard
+        run: |
+          mkdir -p ./dashboard/public/results
+          cp ./temp-results/*final*.json ./dashboard/public/results/
+          cp ./temp-results/*final*.csv ./dashboard/public/results/ 2>/dev/null || true
+
+      - name: Upload consolidated results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results-consolidated
           path: dashboard/public/results/
           retention-days: 30
 
   build-and-deploy:
     runs-on: ubuntu-latest
-    needs: [benchmarking]
-    if: always() && (needs.benchmarking.result == 'success' || github.event.inputs.skip_benchmarking == 'true')
+    needs: [calculate-matrix, benchmarking, consolidate-results]
+    if: always() && (needs.consolidate-results.outputs.consolidation-successful == 'true' || github.event.inputs.skip_benchmarking == 'true')
     permissions:
       contents: read
       pages: write
@@ -110,11 +265,11 @@ jobs:
       - name: Install dashboard dependencies
         run: cd dashboard && npm ci
 
-      - name: Download benchmark results
+      - name: Download consolidated benchmark results
         if: ${{ github.event.inputs.skip_benchmarking != 'true' }}
         uses: actions/download-artifact@v4
         with:
-          name: benchmark-results-${{ github.run_number }}
+          name: benchmark-results-consolidated
           path: dashboard/public/results/
 
       - name: Download existing reports
@@ -167,18 +322,43 @@ jobs:
 
   notify:
     runs-on: ubuntu-latest
-    needs: [benchmarking, build-and-deploy]
+    needs: [calculate-matrix, benchmarking, consolidate-results, build-and-deploy]
     if: always()
     
     steps:
       - name: Notify completion
         run: |
-          if [ "${{ needs.benchmarking.result }}" = "success" ] && [ "${{ needs.build-and-deploy.result }}" = "success" ]; then
-            echo "✅ Complete workflow succeeded!"
+          echo "📋 PARALLEL BENCHMARK EXECUTION SUMMARY"
+          echo "=" * 50
+          if [ "${{ github.event.inputs.skip_benchmarking }}" != "true" ]; then
+            echo "🎯 Configuration:"
+            echo "  Iterations per combination: ${{ github.event.inputs.iterations }}"
+            echo "  Max iterations per job: ${{ github.event.inputs.max_iterations_per_job }}"
+            echo "  Total combinations: ${{ needs.calculate-matrix.outputs.combinations_count }}"
+            echo "  Total iterations: ${{ needs.calculate-matrix.outputs.total_iterations }}"
+            echo "  Parallel jobs: ${{ needs.calculate-matrix.outputs.total_jobs }}"
+            echo ""
+            echo "📊 Results:"
+            echo "  Benchmarking: ${{ needs.benchmarking.result }}"
+            echo "  Consolidation: ${{ needs.consolidate-results.result }}"
+            echo "  Deployment: ${{ needs.build-and-deploy.result }}"
+          fi
+          echo ""
+          
+          if [ "${{ needs.benchmarking.result }}" = "success" ] && [ "${{ needs.consolidate-results.result }}" = "success" ] && [ "${{ needs.build-and-deploy.result }}" = "success" ]; then
+            echo "✅ PARALLEL EXECUTION COMPLETED SUCCESSFULLY!"
+            echo "🚀 Results consolidated from ${{ needs.calculate-matrix.outputs.total_jobs }} parallel jobs"
+            echo "📊 Total ${{ needs.calculate-matrix.outputs.total_iterations }} iterations processed"
           elif [ "${{ github.event.inputs.skip_benchmarking }}" = "true" ] && [ "${{ needs.build-and-deploy.result }}" = "success" ]; then
             echo "✅ Dashboard rebuild succeeded!"
           elif [ "${{ needs.benchmarking.result }}" = "success" ] && [ "${{ needs.build-and-deploy.result }}" != "success" ]; then
             echo "⚠️  Benchmarking succeeded but deployment failed. You can re-run with skip_benchmarking=true"
           else
             echo "❌ Workflow failed. Check the logs for details."
+            if [ "${{ needs.benchmarking.result }}" != "success" ]; then
+              echo "   - Some benchmark jobs failed"
+            fi
+            if [ "${{ needs.consolidate-results.result }}" != "success" ]; then
+              echo "   - Result consolidation failed"
+            fi
           fi
