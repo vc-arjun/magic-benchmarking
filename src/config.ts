@@ -64,30 +64,109 @@ function getDefaultConfig(): Config {
 }
 
 /**
- * Load configuration from environment variable or use default configuration
+ * Load configuration from environment variables or use default configuration
  */
 function loadConfigFromEnv(): Config {
+  // Check for legacy JSON config first
   const configEnvVar = process.env.MAGIC_BENCHMARKING_CONFIG;
   
-  if (!configEnvVar) {
-    logger.info('No MAGIC_BENCHMARKING_CONFIG environment variable found, using default configuration');
-    return getDefaultConfig();
+  if (configEnvVar) {
+    try {
+      const parsedConfig = JSON.parse(configEnvVar) as Config;
+      logger.info('Configuration loaded from MAGIC_BENCHMARKING_CONFIG JSON', {
+        source: 'json_environment',
+        productsCount: parsedConfig.products?.length || 0,
+      });
+      return parsedConfig;
+    } catch (error) {
+      logger.warn('Failed to parse MAGIC_BENCHMARKING_CONFIG, falling back to individual env vars or defaults', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
-  try {
-    const parsedConfig = JSON.parse(configEnvVar) as Config;
-    logger.info('Configuration loaded from environment variable', {
-      source: 'environment',
-      productsCount: parsedConfig.products?.length || 0,
-    });
-    return parsedConfig;
-  } catch (error) {
-    logger.warn('Failed to parse configuration from environment variable, falling back to default config', {
-      error: error instanceof Error ? error.message : String(error),
-      envVarLength: configEnvVar.length,
-    });
-    return getDefaultConfig();
+  // Check for individual environment variables
+  const hasIndividualEnvVars = 
+    process.env.BENCHMARK_ITERATIONS ||
+    process.env.BENCHMARK_NETWORK_SLOW_4G ||
+    process.env.BENCHMARK_NETWORK_NO_THROTTLING ||
+    process.env.BENCHMARK_CPU_4X_SLOWDOWN ||
+    process.env.BENCHMARK_CPU_NO_THROTTLING;
+
+  if (hasIndividualEnvVars) {
+    logger.info('Building configuration from individual environment variables');
+    return buildConfigFromIndividualEnvVars();
   }
+
+  logger.info('No configuration environment variables found, using default configuration');
+  return getDefaultConfig();
+}
+
+/**
+ * Build configuration from individual environment variables
+ */
+function buildConfigFromIndividualEnvVars(): Config {
+  const defaultConfig = getDefaultConfig();
+  
+  // Parse iterations
+  const iterations = process.env.BENCHMARK_ITERATIONS 
+    ? parseInt(process.env.BENCHMARK_ITERATIONS, 10) 
+    : defaultConfig.execution.iterations;
+  
+  // Parse boolean environment variables (GitHub Actions passes 'true'/'false' as strings)
+  const networkSlow4g = process.env.BENCHMARK_NETWORK_SLOW_4G === 'true';
+  const networkNoThrottling = process.env.BENCHMARK_NETWORK_NO_THROTTLING === 'true';
+  const cpu4xSlowdown = process.env.BENCHMARK_CPU_4X_SLOWDOWN === 'true';
+  const cpuNoThrottling = process.env.BENCHMARK_CPU_NO_THROTTLING === 'true';
+  
+  // Apply smart defaults: if no conditions are selected, enable no_throttling for both
+  const finalNetworkNoThrottling = networkNoThrottling || (!networkSlow4g && !networkNoThrottling);
+  const finalCpuNoThrottling = cpuNoThrottling || (!cpu4xSlowdown && !cpuNoThrottling);
+  
+  logger.info('Configuration built from individual environment variables', {
+    iterations,
+    networkConditions: {
+      slow_4g: networkSlow4g,
+      no_throttling: finalNetworkNoThrottling,
+    },
+    cpuConditions: {
+      '4x_slowdown': cpu4xSlowdown,
+      no_throttling: finalCpuNoThrottling,
+    },
+  });
+  
+  return {
+    ...defaultConfig,
+    execution: {
+      ...defaultConfig.execution,
+      iterations,
+    },
+    execution_matrix: {
+      ...defaultConfig.execution_matrix,
+      network: {
+        ...defaultConfig.execution_matrix.network,
+        slow_4g: {
+          ...defaultConfig.execution_matrix.network.slow_4g,
+          enabled: networkSlow4g,
+        },
+        no_throttling: {
+          ...defaultConfig.execution_matrix.network.no_throttling,
+          enabled: finalNetworkNoThrottling,
+        },
+      },
+      cpu: {
+        ...defaultConfig.execution_matrix.cpu,
+        no_throttling: {
+          ...defaultConfig.execution_matrix.cpu.no_throttling,
+          enabled: finalCpuNoThrottling,
+        },
+        '4x_slowdown': {
+          ...defaultConfig.execution_matrix.cpu['4x_slowdown'],
+          enabled: cpu4xSlowdown,
+        },
+      },
+    },
+  };
 }
 
 /**
