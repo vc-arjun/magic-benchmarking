@@ -376,3 +376,119 @@ export function clamp(value: number, min: number, max: number): number {
 export function randomBetween(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+/**
+ * Generate random delay with jitter to avoid thundering herd
+ */
+export function randomDelayWithJitter(baseMs: number, jitterPercent: number = 20): number {
+  const jitter = (Math.random() - 0.5) * 2 * (jitterPercent / 100) * baseMs;
+  return Math.max(100, baseMs + jitter); // Minimum 100ms delay
+}
+
+/**
+ * Generate smart delays for iteration management
+ */
+export function generateIterationDelay(iteration: number): number {
+  // Base delay between iterations (3-8 seconds)
+  const baseDelay = randomBetween(3000, 8000);
+
+  // Add jitter to prevent thundering herd
+  const jitteredDelay = randomDelayWithJitter(baseDelay, 25);
+
+  // Extended delay after every 10 iterations (30-60 seconds)
+  if (iteration > 0 && iteration % 10 === 0) {
+    const extendedDelay = randomBetween(30000, 60000);
+    const jitteredExtendedDelay = randomDelayWithJitter(extendedDelay, 15);
+    console.log(
+      `🕐 Extended delay after iteration ${iteration}: ${Math.round(jitteredExtendedDelay / 1000)}s`
+    );
+    return jitteredExtendedDelay;
+  }
+
+  return jitteredDelay;
+}
+
+/**
+ * User agent rotation for browser diversity
+ */
+export const USER_AGENTS = [
+  // Chrome on Windows
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36',
+
+  // Chrome on macOS
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+
+  // Chrome on Linux
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
+
+  // Edge on Windows
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0',
+
+  // Safari on macOS
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15',
+];
+
+/**
+ * Get a random user agent
+ */
+export function getRandomUserAgent(): string {
+  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+/**
+ * Enhanced exponential backoff with jitter and maximum limits
+ */
+export async function exponentialBackoffRetry<T>(
+  operation: () => Promise<T>,
+  options: {
+    maxRetries?: number;
+    baseDelayMs?: number;
+    maxDelayMs?: number;
+    jitterPercent?: number;
+    shouldRetry?: (error: Error, attempt: number) => boolean;
+    onRetry?: (attempt: number, error: Error, delayMs: number) => void;
+  } = {}
+): Promise<T> {
+  const {
+    maxRetries = 3,
+    baseDelayMs = 1000,
+    maxDelayMs = 30000,
+    jitterPercent = 25,
+    shouldRetry = () => true,
+    onRetry,
+  } = options;
+
+  let lastError: Error;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Don't retry on the last attempt or if shouldRetry returns false
+      if (attempt === maxRetries || !shouldRetry(lastError, attempt)) {
+        throw lastError;
+      }
+
+      // Calculate exponential backoff delay with jitter
+      const exponentialDelay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
+      const jitteredDelay = randomDelayWithJitter(exponentialDelay, jitterPercent);
+
+      // Call retry callback if provided
+      if (onRetry) {
+        onRetry(attempt + 1, lastError, jitteredDelay);
+      }
+
+      await delay(jitteredDelay);
+    }
+  }
+
+  throw lastError!;
+}

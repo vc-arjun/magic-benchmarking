@@ -1,4 +1,4 @@
-import { Browser, BrowserContext, chromium, Page } from 'playwright';
+import { BrowserContext, chromium, Page } from 'playwright';
 import { Config, ProductConfig } from './types/config';
 import { POM } from './types/pom';
 import { CONFIG } from './config';
@@ -11,7 +11,10 @@ import {
   createLogger, 
   logPerformance,
   calculateStatistics,
-  delay 
+  delay,
+  generateIterationDelay,
+  getRandomUserAgent,
+  exponentialBackoffRetry
 } from './utils';
 
 export class TestExecutor {
@@ -67,8 +70,10 @@ export class TestExecutor {
             await this.runIterationWithRetry(combination, i);
             this.executorLogger.debug(`Iteration ${i} completed`);
             
-            // Small delay between iterations to prevent resource exhaustion
-            await delay(1000);
+            // Smart delay between iterations with jitter and extended delays
+            const delayMs = generateIterationDelay(i);
+            this.executorLogger.debug(`Waiting ${Math.round(delayMs / 1000)}s before next iteration`);
+            await delay(delayMs);
           }
         }
         
@@ -141,7 +146,7 @@ export class TestExecutor {
   }
 
   /**
-   * Run a single iteration with retry logic
+   * Run a single iteration with enhanced retry logic using exponential backoff
    */
   private async runIterationWithRetry(
     combination: {network: string, cpu: string, user_state: string}, 
@@ -149,67 +154,144 @@ export class TestExecutor {
     skipMetrics: boolean = false
   ): Promise<void> {
     const retryConfig = this.config.execution.retry;
-    const maxAttempts = retryConfig.max_attempts;
-    let lastError: Error | null = null;
     
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        if (attempt > 1) {
-          console.log(`🔄 Retry attempt ${attempt - 1}/${maxAttempts - 1} for iteration ${iteration}`);
-          // Add delay between retries to allow system to stabilize
-          await new Promise((resolve) => setTimeout(resolve, retryConfig.delay_between_retries));
+    try {
+      await exponentialBackoffRetry(
+        () => this.runIteration(combination, iteration, skipMetrics),
+        {
+          maxRetries: retryConfig.max_attempts - 1, // -1 because exponentialBackoffRetry includes initial attempt
+          baseDelayMs: retryConfig.delay_between_retries,
+          maxDelayMs: 30000, // Cap at 30 seconds
+          jitterPercent: 25,
+          shouldRetry: (error) => {
+            // Don't retry on certain critical errors
+            const criticalErrors = ['Page crashed', 'Browser closed', 'Context disposed'];
+            const isCriticalError = criticalErrors.some(criticalError => 
+              error.message.includes(criticalError)
+            );
+            
+            if (isCriticalError) {
+              this.executorLogger.warn(`Critical error detected, not retrying: ${error.message}`);
+              return false;
+            }
+            
+            return true;
+          },
+          onRetry: (attempt, error, delayMs) => {
+            console.log(`🔄 Retry attempt ${attempt}/${retryConfig.max_attempts - 1} for iteration ${iteration} after ${Math.round(delayMs / 1000)}s`);
+            this.executorLogger.warn(`Retry attempt ${attempt} for iteration ${iteration}`, {
+              error: error.message,
+              delayMs,
+              combination
+            });
+          }
         }
-        
-        await this.runIteration(combination, iteration, skipMetrics);
-        
-        if (attempt > 1) {
-          console.log(`✅ Retry successful on attempt ${attempt - 1} for iteration ${iteration}`);
-        }
-        
-        return; // Success, exit retry loop
-      } catch (error) {
-        lastError = error instanceof Error ? error : new Error(String(error));
-        console.log(`❌ Attempt ${attempt} failed for iteration ${iteration}: ${lastError.message}`);
-        
-        if (attempt === maxAttempts) {
-          console.log(`💥 All ${maxAttempts} attempts failed for iteration ${iteration}. Stopping execution.`);
-          
-          // Track failed iteration
-          this.failedIterations.push({
-            combination,
-            iteration,
-            error: lastError.message
-          });
-          
-          // Throw error to stop execution immediately
-          throw new Error(`Benchmarking failed on iteration ${iteration} after ${maxAttempts} attempts: ${lastError.message}`);
-        }
-      }
+      );
+      
+      this.executorLogger.debug(`Iteration ${iteration} completed successfully`);
+    } catch (error) {
+      const lastError = error instanceof Error ? error : new Error(String(error));
+      console.log(`💥 All retry attempts failed for iteration ${iteration}: ${lastError.message}`);
+      
+      // Track failed iteration
+      this.failedIterations.push({
+        combination,
+        iteration,
+        error: lastError.message
+      });
+      
+      // Throw error to stop execution immediately
+      throw new Error(`Benchmarking failed on iteration ${iteration} after ${retryConfig.max_attempts} attempts: ${lastError.message}`);
     }
   }
 
 
   /**
-   * Run a single iteration with fresh browser process
+   * Run a single iteration with completely fresh browser process and profile
    */
   private async runIteration(
     combination: {network: string, cpu: string, user_state: string}, 
     iteration: number,
     skipMetrics: boolean = false
   ): Promise<void> {
-    let browser: Browser | null = null;
     let context: BrowserContext | null = null;
     let page: Page | null = null;
     let pom: POM | null = null;
 
     try {
-      browser = await chromium.launch({
+      // Generate unique user data directory for complete isolation
+      const fs = await import('fs');
+      const path = await import('path');
+      const os = await import('os');
+      
+      const tempDir = os.tmpdir();
+      const userDataDir = path.join(tempDir, `magic-benchmark-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+      
+      // Ensure temp directory exists
+      if (!fs.existsSync(userDataDir)) {
+        fs.mkdirSync(userDataDir, { recursive: true });
+      }
+
+      this.executorLogger.debug(`Creating fresh browser profile: ${userDataDir}`);
+
+      // Get random user agent for this iteration
+      const userAgent = getRandomUserAgent();
+      this.executorLogger.debug(`Using user agent: ${userAgent.substring(0, 50)}...`);
+
+      // Launch persistent context with completely fresh profile
+      context = await chromium.launchPersistentContext(userDataDir, {
         headless: this.config.execution.headless,
         timeout: this.config.execution.timeout,
+        userAgent,
+        viewport: { width: 1920, height: 1080 },
+        // Additional isolation settings
+        ignoreHTTPSErrors: false,
+        bypassCSP: false,
+        args: [
+          '--no-first-run',
+          '--no-default-browser-check',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--disable-features=TranslateUI',
+          '--disable-ipc-flooding-protection',
+          '--disable-dev-shm-usage',
+          '--no-sandbox', // Note: Only for CI environments
+        ],
       });
 
-      context = await browser.newContext();
-      page = await context.newPage();
+      // Get the first page from the persistent context
+      const pages = context.pages();
+      page = pages.length > 0 ? pages[0] : await context.newPage();
+
+      // Additional data clearing - ensure completely clean state
+      await this.clearAllBrowserData(page);
+
+      // Cleanup temp directory after context closes
+      const cleanupTempDir = async () => {
+        try {
+          // Wait a bit for any remaining processes to finish
+          await delay(500);
+          if (fs.existsSync(userDataDir)) {
+            fs.rmSync(userDataDir, { recursive: true, force: true });
+            this.executorLogger.debug(`Cleaned up temp directory: ${userDataDir}`);
+          }
+        } catch (error) {
+          this.executorLogger.warn(`Failed to cleanup temp directory: ${error}`);
+          // Try again with more aggressive cleanup
+          try {
+            await delay(1000);
+            if (fs.existsSync(userDataDir)) {
+              fs.rmSync(userDataDir, { recursive: true, force: true });
+            }
+          } catch (retryError) {
+            this.executorLogger.warn(`Retry cleanup also failed: ${retryError}`);
+          }
+        }
+      };
+
+      // Store cleanup function for later use instead of adding multiple listeners
+      (context as BrowserContext & { _cleanupTempDir?: () => Promise<void> })._cleanupTempDir = cleanupTempDir;
       
       // Set page timeout to match our config, especially important for slow network conditions
       page.setDefaultTimeout(this.config.execution.timeout);
@@ -295,9 +377,102 @@ export class TestExecutor {
       await pom.initialize();
       await this.performInitialLoadBenchmark(pom, skipMetrics);
     } finally {
-      await page?.close();
-      await context?.close();
-      await browser?.close();
+      // Ensure complete cleanup
+      try {
+        if (page && !page.isClosed()) {
+          await page.close();
+        }
+        if (context) {
+          await context.close();
+          
+          // Run the stored cleanup function
+          const cleanupTempDir = (context as BrowserContext & { _cleanupTempDir?: () => Promise<void> })._cleanupTempDir;
+          if (cleanupTempDir) {
+            await cleanupTempDir();
+          }
+        }
+        
+        // Force garbage collection if available
+        if (global.gc) {
+          global.gc();
+        }
+        
+        this.executorLogger.debug(`Browser resources cleaned up for iteration ${iteration}`);
+      } catch (error) {
+        this.executorLogger.warn(`Error during browser cleanup: ${error}`);
+      }
+    }
+  }
+
+  /**
+   * Clear all browser data to ensure completely fresh state
+   */
+  private async clearAllBrowserData(page: Page): Promise<void> {
+    try {
+      // Clear all storage using CDP
+      const cdpSession = await page.context().newCDPSession(page);
+      
+      // Clear various storage types
+      await Promise.all([
+        // Clear cookies
+        cdpSession.send('Network.clearBrowserCookies'),
+        
+        // Clear cache
+        cdpSession.send('Network.clearBrowserCache'),
+        
+        // Clear storage (localStorage, sessionStorage, indexedDB, etc.)
+        cdpSession.send('Storage.clearDataForOrigin', {
+          origin: '*',
+          storageTypes: 'all'
+        }).catch(() => {
+          // Fallback if Storage.clearDataForOrigin is not available
+          return cdpSession.send('DOMStorage.clear');
+        }),
+        
+        // Clear service workers
+        cdpSession.send('ServiceWorker.unregister', {
+          scopeURL: '*'
+        }).catch(() => {
+          // Service worker clearing might not be available in all contexts
+        }),
+      ]);
+
+      // Additional JavaScript-based clearing
+      await page.evaluate(() => {
+        // Clear localStorage
+        try {
+          localStorage.clear();
+        } catch {
+          // localStorage might not be available
+        }
+        
+        // Clear sessionStorage
+        try {
+          sessionStorage.clear();
+        } catch {
+          // sessionStorage might not be available
+        }
+        
+        // Clear any cached data
+        try {
+          if ('caches' in window) {
+            caches.keys().then(names => {
+              names.forEach(name => {
+                caches.delete(name);
+              });
+            });
+          }
+        } catch {
+          // Cache API might not be available
+        }
+      });
+
+      await cdpSession.detach();
+      
+      this.executorLogger.debug('Browser data cleared successfully');
+    } catch (error) {
+      this.executorLogger.warn(`Failed to clear browser data: ${error}`);
+      // Don't throw error as this is not critical for test execution
     }
   }
 
