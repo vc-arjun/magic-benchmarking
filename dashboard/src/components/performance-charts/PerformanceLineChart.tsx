@@ -51,7 +51,7 @@ export const PerformanceLineChart: React.FC<Props> = ({ data, products, contextL
               if (!item) return label;
 
               // Build detailed tooltip content
-              let content = `Execution Context: \n${item.contextLabel}\n\n`;
+              let content = `Context ${item.contextIndex}: ${item.contextLabel}\n\n`;
 
               // Add statistics for each product
               payload?.forEach((entry) => {
@@ -72,7 +72,7 @@ export const PerformanceLineChart: React.FC<Props> = ({ data, products, contextL
                     typeof max === 'number' &&
                     iterations
                   ) {
-                    content += `Statistics:\n`;
+                    content += `${productName}:\n`;
                     content += `  Mean: ${mean.toFixed(2)} ms\n`;
                     content += `  Min: ${min.toFixed(2)} ms\n`;
                     content += `  Max: ${max.toFixed(2)} ms\n`;

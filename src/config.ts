@@ -26,7 +26,7 @@ function getDefaultConfig(): Config {
           download_throughput: 500000, // 500kbps
           upload_throughput: 500000, // 500kbps
           latency: 400, // 400ms
-          enabled: false,
+          enabled: true,
         },
         no_throttling: {
           download_throughput: 0, // 0Mbps
@@ -42,7 +42,7 @@ function getDefaultConfig(): Config {
         },
         '4x_slowdown': {
           rate: 4,
-          enabled: false,
+          enabled: true,
         },
       },
       user_state: {

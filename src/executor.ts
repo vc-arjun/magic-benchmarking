@@ -25,6 +25,7 @@ export class TestExecutor {
   private executorLogger: ReturnType<typeof createLogger>;
   private browser: Browser | null = null;
   private context: BrowserContext | null = null;
+  private currentCdpSession: CDPSession | null = null;
 
   constructor(product: ProductConfig) {
     this.product = product;
@@ -81,10 +82,104 @@ export class TestExecutor {
   }
 
   /**
+   * Initialize CDP session for an execution context (network + CPU combination)
+   */
+  private async initializeExecutionContext(combination: {network: string, cpu: string, user_state: string}): Promise<void> {
+    if (!this.context) {
+      throw new Error('Browser context not initialized');
+    }
+
+    // Clean up any existing CDP session
+    await this.cleanupCdpSession();
+
+    const networkConfig = this.config.execution_matrix.network[combination.network];
+    const cpuConfig = this.config.execution_matrix.cpu[combination.cpu];
+    
+    // Only create CDP session if throttling is needed
+    if (networkConfig.download_throughput > 0 || cpuConfig.rate > 1) {
+      this.executorLogger.debug('Creating CDP session for execution context', { combination });
+      
+      // Create a temporary page to establish CDP session
+      const tempPage = await this.context.newPage();
+      this.currentCdpSession = await this.context.newCDPSession(tempPage);
+      
+      // Apply network throttling if needed
+      if (networkConfig.download_throughput > 0) {
+        await this.currentCdpSession.send('Network.emulateNetworkConditions', {
+          offline: false,
+          downloadThroughput: networkConfig.download_throughput,
+          uploadThroughput: networkConfig.upload_throughput,
+          latency: networkConfig.latency,
+        });
+        this.executorLogger.debug('Applied network throttling', { 
+          downloadThroughput: networkConfig.download_throughput,
+          uploadThroughput: networkConfig.upload_throughput,
+          latency: networkConfig.latency
+        });
+      }
+
+      // Apply CPU throttling if needed
+      if (cpuConfig.rate > 1) {
+        await this.currentCdpSession.send('Emulation.setCPUThrottlingRate', {
+          rate: cpuConfig.rate,
+        });
+        this.executorLogger.debug('Applied CPU throttling', { rate: cpuConfig.rate });
+      }
+      
+      // Close the temporary page but keep the CDP session
+      await tempPage.close();
+    }
+  }
+
+  /**
+   * Reset browser state and cleanup CDP session after execution context completion
+   */
+  private async resetExecutionContext(): Promise<void> {
+    this.executorLogger.debug('Resetting execution context');
+    
+    try {
+      // Clean up CDP session
+      await this.cleanupCdpSession();
+      
+      // Reset browser state by creating a new context
+      if (this.context) {
+        await this.context.close();
+        this.context = null;
+        this.executorLogger.debug('Closed browser context for reset');
+      }
+      
+      // Reinitialize context for next execution context
+      await this.initializeBrowser();
+      this.executorLogger.debug('Reinitialized browser context after reset');
+      
+    } catch (error) {
+      this.executorLogger.warn(`Error during execution context reset: ${error}`);
+    }
+  }
+
+  /**
+   * Clean up CDP session resources
+   */
+  private async cleanupCdpSession(): Promise<void> {
+    if (this.currentCdpSession) {
+      try {
+        await this.currentCdpSession.detach();
+        this.currentCdpSession = null;
+        this.executorLogger.debug('CDP session detached');
+      } catch (error) {
+        this.executorLogger.warn(`Error detaching CDP session: ${error}`);
+        this.currentCdpSession = null;
+      }
+    }
+  }
+
+  /**
    * Cleanup browser and context resources
    */
   async cleanup(): Promise<void> {
     try {
+      await this.cleanupCdpSession();
+      
       if (this.context) {
         await this.context.close();
         this.context = null;
@@ -130,21 +225,29 @@ export class TestExecutor {
               progress: `${Math.round(((index) / executionCombinations.length) * 100)}%`,
             });
             
-            // Warmup iteration with retry logic
-            this.executorLogger.debug('Starting warmup iteration');
-            await this.runIterationWithRetry(combination, 0, true);
-            this.executorLogger.debug('Warmup iteration completed');
+            // Initialize CDP session for this execution context
+            await this.initializeExecutionContext(combination);
             
-            // Actual iterations with retry logic
-            for (let i = 1; i <= this.config.execution.iterations; i++) {
-              this.executorLogger.debug(`Starting iteration ${i}/${this.config.execution.iterations}`);
-              await this.runIterationWithRetry(combination, i);
-              this.executorLogger.debug(`Iteration ${i} completed`);
+            try {
+              // Warmup iteration with retry logic
+              this.executorLogger.debug('Starting warmup iteration');
+              await this.runIterationWithRetry(combination, 0, true);
+              this.executorLogger.debug('Warmup iteration completed');
               
-              // Smart delay between iterations with jitter and extended delays
-              const delayMs = generateIterationDelay(i);
-              this.executorLogger.debug(`Waiting ${Math.round(delayMs / 1000)}s before next iteration`);
-              await delay(delayMs);
+              // Actual iterations with retry logic
+              for (let i = 1; i <= this.config.execution.iterations; i++) {
+                this.executorLogger.debug(`Starting iteration ${i}/${this.config.execution.iterations}`);
+                await this.runIterationWithRetry(combination, i);
+                this.executorLogger.debug(`Iteration ${i} completed`);
+                
+                // Smart delay between iterations with jitter and extended delays
+                const delayMs = generateIterationDelay(i);
+                this.executorLogger.debug(`Waiting ${Math.round(delayMs / 1000)}s before next iteration`);
+                await delay(delayMs);
+              }
+            } finally {
+              // Reset browser state and cleanup CDP session after all iterations for this context
+              await this.resetExecutionContext();
             }
           }
           
@@ -282,7 +385,7 @@ export class TestExecutor {
 
 
   /**
-   * Run a single iteration with shared context, only creating new pages
+   * Run a single iteration using the shared CDP session for the execution context
    */
   private async runIteration(
     combination: {network: string, cpu: string, user_state: string}, 
@@ -294,36 +397,11 @@ export class TestExecutor {
     }
 
     let page: Page | null = null;
-    let cdpSession: CDPSession | null = null;
 
     try {
       // Create new page from shared context
+      // The CDP session throttling is already applied at the context level
       page = await this.context.newPage();
-
-      // Create single CDP session for both network and CPU throttling
-      const networkConfig = this.config.execution_matrix.network[combination.network];
-      const cpuConfig = this.config.execution_matrix.cpu[combination.cpu];
-      
-      if (networkConfig.download_throughput > 0 || cpuConfig.rate > 1) {
-        cdpSession = await this.context.newCDPSession(page);
-        
-        // Apply network throttling if needed
-        if (networkConfig.download_throughput > 0) {
-          await cdpSession.send('Network.emulateNetworkConditions', {
-            offline: false,
-            downloadThroughput: networkConfig.download_throughput,
-            uploadThroughput: networkConfig.upload_throughput,
-            latency: networkConfig.latency,
-          });
-        }
-
-        // Apply CPU throttling if needed
-        if (cpuConfig.rate > 1) {
-          await cdpSession.send('Emulation.setCPUThrottlingRate', {
-            rate: cpuConfig.rate,
-          });
-        }
-      }
 
       // Set up monitors
       this.performanceMonitor.setPage(page);
@@ -349,16 +427,13 @@ export class TestExecutor {
       await pom.initialize();
       await this.performInitialLoadBenchmark(pom, skipMetrics);
     } finally {
-      // Proper cleanup - detach CDP session first, then close page
+      // Only need to close the page - CDP session is managed at context level
       try {
-        if (cdpSession) {
-          await cdpSession.detach();
-        }
         if (page && !page.isClosed()) {
           await page.close();
         }
       } catch (error) {
-        this.executorLogger.warn(`Error during cleanup: ${error}`);
+        this.executorLogger.warn(`Error during page cleanup: ${error}`);
       }
     }
   }
