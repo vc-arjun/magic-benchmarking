@@ -33,6 +33,16 @@ on:
         required: false
         default: true
         type: boolean
+      product_magic_checkout:
+          description: 'Enable Magic Checkout'
+          required: false
+          default: true
+          type: boolean
+      product_gokwik:
+          description: 'Enable Gokwik'
+          required: false
+          default: true
+          type: boolean
       override_reports:
         description: 'Override existing reports instead of concatenating'
         required: false
@@ -43,16 +53,7 @@ on:
         required: false
         default: false
         type: boolean
-      product_magic_checkout:
-        description: 'Enable Magic Checkout product testing'
-        required: false
-        default: true
-        type: boolean
-      product_gokwik:
-        description: 'Enable Gokwik product testing'
-        required: false
-        default: true
-        type: boolean
+
 
 jobs:
   # Calculate execution matrix and job distribution
