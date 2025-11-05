@@ -1,4 +1,4 @@
-name: Benchmark and Deploy (Split Jobs)
+name: Benchmark and Deploy
 
 on:
   workflow_dispatch:
@@ -16,7 +16,7 @@ on:
       network_no_throttling:
         description: 'Enable No throttling network condition'
         required: false
-        default: false
+        default: true
         type: boolean
       cpu_4x_slowdown:
         description: 'Enable 4x CPU slowdown'
@@ -26,7 +26,7 @@ on:
       cpu_no_throttling:
         description: 'Enable No throttling CPU condition'
         required: false
-        default: false
+        default: true
         type: boolean
       override_reports:
         description: 'Override existing reports instead of concatenating (default: false)'
