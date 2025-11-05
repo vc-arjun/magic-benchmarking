@@ -1,4 +1,4 @@
-import { BrowserContext, chromium, Page } from 'playwright';
+import { Browser, BrowserContext, chromium, Page, CDPSession } from 'playwright';
 import { Config, ProductConfig } from './types/config';
 import { POM } from './types/pom';
 import { CONFIG } from './config';
@@ -13,7 +13,6 @@ import {
   calculateStatistics,
   delay,
   generateIterationDelay,
-  getRandomUserAgent,
   exponentialBackoffRetry
 } from './utils';
 
@@ -24,6 +23,8 @@ export class TestExecutor {
   private networkMonitor: NetworkMonitor;
   private failedIterations: Array<{combination: {network: string, cpu: string, user_state: string}, iteration: number, error: string}> = [];
   private executorLogger: ReturnType<typeof createLogger>;
+  private browser: Browser | null = null;
+  private context: BrowserContext | null = null;
 
   constructor(product: ProductConfig) {
     this.product = product;
@@ -33,63 +34,137 @@ export class TestExecutor {
     this.executorLogger = createLogger(`TestExecutor:${product.name}`);
   }
 
+  /**
+   * Initialize browser and context at the start of testing
+   */
+  private async initializeBrowser(): Promise<void> {
+    if (!this.browser) {
+      this.executorLogger.debug('Creating browser instance');
+      this.browser = await chromium.launch({
+        headless: this.config.execution.headless,
+        args: [
+          // Disable Local Network Access permission popup
+          '--disable-web-security',
+          // Additional automation flags
+          '--no-first-run',
+          '--no-default-browser-check',
+          '--disable-background-timer-throttling',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--disable-dev-shm-usage',
+          '--disable-extensions',
+          '--disable-plugins',
+          '--disable-sync',
+          '--disable-translate',
+          '--disable-default-apps',
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+        ],
+      });
+    }
+
+    if (!this.context) {
+      this.executorLogger.debug('Creating browser context');
+      this.context = await this.browser.newContext({
+        viewport: { 
+          width: this.config.execution.viewport.width, 
+          height: this.config.execution.viewport.height 
+        },
+        // Grant all permissions to avoid popups
+        permissions: ['camera', 'microphone', 'geolocation', 'notifications'],
+        // Ignore HTTPS errors for local development
+        ignoreHTTPSErrors: true,
+        // Accept downloads automatically
+        acceptDownloads: true,
+      });
+    }
+  }
+
+  /**
+   * Cleanup browser and context resources
+   */
+  async cleanup(): Promise<void> {
+    try {
+      if (this.context) {
+        await this.context.close();
+        this.context = null;
+        this.executorLogger.debug('Context closed');
+      }
+      if (this.browser) {
+        await this.browser.close();
+        this.browser = null;
+        this.executorLogger.debug('Browser closed');
+      }
+    } catch (error) {
+      this.executorLogger.warn(`Error during cleanup: ${error}`);
+    }
+  }
+
   @logPerformance
   async run(): Promise<void> {
-    return ErrorHandler.withRetry(
-      async () => {
-        this.executorLogger.info('Starting execution', {
-          product: this.product.name,
-          iterations: this.config.execution.iterations,
-        });
-        
-        // Reset measurements for fresh run
-        this.performanceMonitor.reset();
-        this.networkMonitor.reset();
-        
-        // Get execution matrix combinations
-        const executionCombinations = this.generateExecutionCombinations();
-        this.executorLogger.info('Generated execution combinations', {
-          combinationsCount: executionCombinations.length,
-          combinations: executionCombinations,
-        });
-        
-        for (const [index, combination] of executionCombinations.entries()) {
-          this.executorLogger.info(`Testing combination ${index + 1}/${executionCombinations.length}`, {
-            combination,
-            progress: `${Math.round(((index) / executionCombinations.length) * 100)}%`,
+    try {
+      return await ErrorHandler.withRetry(
+        async () => {
+          this.executorLogger.info('Starting execution', {
+            product: this.product.name,
+            iterations: this.config.execution.iterations,
           });
           
-          // Warmup iteration with retry logic
-          this.executorLogger.debug('Starting warmup iteration');
-          await this.runIterationWithRetry(combination, 0, true);
-          this.executorLogger.debug('Warmup iteration completed');
+          // Initialize browser once at the start
+          await this.initializeBrowser();
           
-          // Actual iterations with retry logic
-          for (let i = 1; i <= this.config.execution.iterations; i++) {
-            this.executorLogger.debug(`Starting iteration ${i}/${this.config.execution.iterations}`);
-            await this.runIterationWithRetry(combination, i);
-            this.executorLogger.debug(`Iteration ${i} completed`);
+          // Reset measurements for fresh run
+          this.performanceMonitor.reset();
+          this.networkMonitor.reset();
+          
+          // Get execution matrix combinations
+          const executionCombinations = this.generateExecutionCombinations();
+          this.executorLogger.info('Generated execution combinations', {
+            combinationsCount: executionCombinations.length,
+            combinations: executionCombinations,
+          });
+          
+          for (const [index, combination] of executionCombinations.entries()) {
+            this.executorLogger.info(`Testing combination ${index + 1}/${executionCombinations.length}`, {
+              combination,
+              progress: `${Math.round(((index) / executionCombinations.length) * 100)}%`,
+            });
             
-            // Smart delay between iterations with jitter and extended delays
-            const delayMs = generateIterationDelay(i);
-            this.executorLogger.debug(`Waiting ${Math.round(delayMs / 1000)}s before next iteration`);
-            await delay(delayMs);
+            // Warmup iteration with retry logic
+            this.executorLogger.debug('Starting warmup iteration');
+            await this.runIterationWithRetry(combination, 0, true);
+            this.executorLogger.debug('Warmup iteration completed');
+            
+            // Actual iterations with retry logic
+            for (let i = 1; i <= this.config.execution.iterations; i++) {
+              this.executorLogger.debug(`Starting iteration ${i}/${this.config.execution.iterations}`);
+              await this.runIterationWithRetry(combination, i);
+              this.executorLogger.debug(`Iteration ${i} completed`);
+              
+              // Smart delay between iterations with jitter and extended delays
+              const delayMs = generateIterationDelay(i);
+              this.executorLogger.debug(`Waiting ${Math.round(delayMs / 1000)}s before next iteration`);
+              await delay(delayMs);
+            }
           }
+          
+          // Print execution summary
+          this.printExecutionSummary();
+          
+          this.executorLogger.info('Execution completed successfully', {
+            totalIterations: executionCombinations.length * this.config.execution.iterations,
+            failedIterations: this.failedIterations.length,
+          });
+        },
+        {
+          maxAttempts: 1, // Don't retry the entire execution
+          shouldRetry: () => false,
         }
-        
-        // Print execution summary
-        this.printExecutionSummary();
-        
-        this.executorLogger.info('Execution completed successfully', {
-          totalIterations: executionCombinations.length * this.config.execution.iterations,
-          failedIterations: this.failedIterations.length,
-        });
-      },
-      {
-        maxAttempts: 1, // Don't retry the entire execution
-        shouldRetry: () => false,
-      }
-    );
+      );
+    } finally {
+      // Always cleanup browser resources
+      await this.cleanup();
+    }
   }
 
   /**
@@ -207,127 +282,50 @@ export class TestExecutor {
 
 
   /**
-   * Run a single iteration with completely fresh browser process and profile
+   * Run a single iteration with shared context, only creating new pages
    */
   private async runIteration(
     combination: {network: string, cpu: string, user_state: string}, 
     iteration: number,
     skipMetrics: boolean = false
   ): Promise<void> {
-    let context: BrowserContext | null = null;
+    if (!this.context) {
+      throw new Error('Browser context not initialized');
+    }
+
     let page: Page | null = null;
-    let pom: POM | null = null;
+    let cdpSession: CDPSession | null = null;
 
     try {
-      // Generate unique user data directory for complete isolation
-      const fs = await import('fs');
-      const path = await import('path');
-      const os = await import('os');
-      
-      const tempDir = os.tmpdir();
-      const userDataDir = path.join(tempDir, `magic-benchmark-${Date.now()}-${Math.random().toString(36).substring(7)}`);
-      
-      // Ensure temp directory exists
-      if (!fs.existsSync(userDataDir)) {
-        fs.mkdirSync(userDataDir, { recursive: true });
-      }
+      // Create new page from shared context
+      page = await this.context.newPage();
 
-      this.executorLogger.debug(`Creating fresh browser profile: ${userDataDir}`);
-
-      // Get random user agent for this iteration
-      const userAgent = getRandomUserAgent();
-      this.executorLogger.debug(`Using user agent: ${userAgent.substring(0, 50)}...`);
-
-      // Launch persistent context with completely fresh profile
-      context = await chromium.launchPersistentContext(userDataDir, {
-        headless: this.config.execution.headless,
-        timeout: this.config.execution.timeout,
-        userAgent,
-        viewport: { 
-          width: this.config.execution.viewport.width, 
-          height: this.config.execution.viewport.height 
-        },
-        // Additional isolation settings
-        ignoreHTTPSErrors: false,
-        bypassCSP: false,
-        args: [
-          '--no-first-run',
-          '--no-default-browser-check',
-          '--disable-background-timer-throttling',
-          '--disable-backgrounding-occluded-windows',
-          '--disable-renderer-backgrounding',
-          '--disable-features=TranslateUI',
-          '--disable-ipc-flooding-protection',
-          '--disable-dev-shm-usage',
-          '--no-sandbox', // Note: Only for CI environments
-        ],
-      });
-
-      // Get the first page from the persistent context
-      const pages = context.pages();
-      page = pages.length > 0 ? pages[0] : await context.newPage();
-
-      // Additional data clearing - ensure completely clean state
-      await this.clearAllBrowserData(page);
-
-      // Cleanup temp directory after context closes
-      const cleanupTempDir = async () => {
-        try {
-          // Wait a bit for any remaining processes to finish
-          await delay(500);
-          if (fs.existsSync(userDataDir)) {
-            fs.rmSync(userDataDir, { recursive: true, force: true });
-            this.executorLogger.debug(`Cleaned up temp directory: ${userDataDir}`);
-          }
-        } catch (error) {
-          this.executorLogger.warn(`Failed to cleanup temp directory: ${error}`);
-          // Try again with more aggressive cleanup
-          try {
-            await delay(1000);
-            if (fs.existsSync(userDataDir)) {
-              fs.rmSync(userDataDir, { recursive: true, force: true });
-            }
-          } catch (retryError) {
-            this.executorLogger.warn(`Retry cleanup also failed: ${retryError}`);
-          }
-        }
-      };
-
-      // Store cleanup function for later use instead of adding multiple listeners
-      (context as BrowserContext & { _cleanupTempDir?: () => Promise<void> })._cleanupTempDir = cleanupTempDir;
-      
-      // Set page timeout to match our config, especially important for slow network conditions
-      page.setDefaultTimeout(this.config.execution.timeout);
-      page.setDefaultNavigationTimeout(this.config.execution.timeout);
-
-      // Apply network throttling
+      // Create single CDP session for both network and CPU throttling
       const networkConfig = this.config.execution_matrix.network[combination.network];
-      if (networkConfig.download_throughput > 0) {
-        await page.route('**/*', async (route) => {
-          await route.continue();
-        });
-        
-        const cdpSession = await context.newCDPSession(page);
-        await cdpSession.send('Network.emulateNetworkConditions', {
-          offline: false,
-          downloadThroughput: networkConfig.download_throughput,
-          uploadThroughput: networkConfig.upload_throughput,
-          latency: networkConfig.latency,
-        });
-      }
-
-      // Apply CPU throttling
       const cpuConfig = this.config.execution_matrix.cpu[combination.cpu];
-      if (cpuConfig.rate > 1) {
-        const cdpSession = await context.newCDPSession(page);
-        await cdpSession.send('Emulation.setCPUThrottlingRate', {
-          rate: cpuConfig.rate,
-        });
+      
+      if (networkConfig.download_throughput > 0 || cpuConfig.rate > 1) {
+        cdpSession = await this.context.newCDPSession(page);
+        
+        // Apply network throttling if needed
+        if (networkConfig.download_throughput > 0) {
+          await cdpSession.send('Network.emulateNetworkConditions', {
+            offline: false,
+            downloadThroughput: networkConfig.download_throughput,
+            uploadThroughput: networkConfig.upload_throughput,
+            latency: networkConfig.latency,
+          });
+        }
+
+        // Apply CPU throttling if needed
+        if (cpuConfig.rate > 1) {
+          await cdpSession.send('Emulation.setCPUThrottlingRate', {
+            rate: cpuConfig.rate,
+          });
+        }
       }
 
-      if (!this.performanceMonitor) {
-        throw new Error('Performance monitor not initialized');
-      }
+      // Set up monitors
       this.performanceMonitor.setPage(page);
       this.networkMonitor.setPage(page);
 
@@ -343,141 +341,59 @@ export class TestExecutor {
         this.networkMonitor.setExecutionContext(executionContext, iteration);
       }
 
-      // Import POM module - handle both development (.ts) and production (.js) environments
-      let pomModule;
-      try {
-        // First try: development mode with .ts extension
-        if (process.env.NODE_ENV !== 'production') {
-          pomModule = await import(`./pom/${this.product.pom_file}.ts`);
-        } else {
-          // Production mode: use .js extension
-          const pomFile = this.product.pom_file.endsWith('.ts') 
-            ? this.product.pom_file.replace('.ts', '.js')
-            : `${this.product.pom_file}.js`;
-          pomModule = await import(`./pom/${pomFile}`);
-        }
-      } catch (error) {
-        // Fallback: try the other extension
-        try {
-          if (process.env.NODE_ENV !== 'production') {
-            // Try without .ts extension in development
-            pomModule = await import(`./pom/${this.product.pom_file}`);
-          } else {
-            // Try .ts in production (shouldn't happen but just in case)
-            pomModule = await import(`./pom/${this.product.pom_file}.ts`);
-          }
-        } catch (fallbackError) {
-          throw new Error(`Could not import POM module: ${this.product.pom_file}. Tried both .ts and .js extensions. Original error: ${error}. Fallback error: ${fallbackError}`);
-        }
-      }
-      
-      pom = new pomModule.default(page, this.product, this.performanceMonitor, this.networkMonitor);
+      // Import and create POM
+      const pomModule = await this.importPOMModule();
+      const pom = new pomModule.default(page, this.product, this.performanceMonitor, this.networkMonitor);
 
-      // Initialize and run the test
-      if (!pom) {
-        throw new Error('Failed to create POM instance');
-      }
+      // Run the test
       await pom.initialize();
       await this.performInitialLoadBenchmark(pom, skipMetrics);
     } finally {
-      // Ensure complete cleanup
+      // Proper cleanup - detach CDP session first, then close page
       try {
+        if (cdpSession) {
+          await cdpSession.detach();
+        }
         if (page && !page.isClosed()) {
           await page.close();
         }
-        if (context) {
-          await context.close();
-          
-          // Run the stored cleanup function
-          const cleanupTempDir = (context as BrowserContext & { _cleanupTempDir?: () => Promise<void> })._cleanupTempDir;
-          if (cleanupTempDir) {
-            await cleanupTempDir();
-          }
-        }
-        
-        // Force garbage collection if available
-        if (global.gc) {
-          global.gc();
-        }
-        
-        this.executorLogger.debug(`Browser resources cleaned up for iteration ${iteration}`);
       } catch (error) {
-        this.executorLogger.warn(`Error during browser cleanup: ${error}`);
+        this.executorLogger.warn(`Error during cleanup: ${error}`);
       }
     }
   }
 
   /**
-   * Clear all browser data to ensure completely fresh state
+   * Import POM module with simplified logic
    */
-  private async clearAllBrowserData(page: Page): Promise<void> {
+  private async importPOMModule(): Promise<{ default: new (page: Page, product: ProductConfig, performanceMonitor: PerformanceMonitor, networkMonitor: NetworkMonitor) => POM }> {
     try {
-      // Clear all storage using CDP
-      const cdpSession = await page.context().newCDPSession(page);
-      
-      // Clear various storage types
-      await Promise.all([
-        // Clear cookies
-        cdpSession.send('Network.clearBrowserCookies'),
-        
-        // Clear cache
-        cdpSession.send('Network.clearBrowserCache'),
-        
-        // Clear storage (localStorage, sessionStorage, indexedDB, etc.)
-        cdpSession.send('Storage.clearDataForOrigin', {
-          origin: '*',
-          storageTypes: 'all'
-        }).catch(() => {
-          // Fallback if Storage.clearDataForOrigin is not available
-          return cdpSession.send('DOMStorage.clear');
-        }),
-        
-        // Clear service workers
-        cdpSession.send('ServiceWorker.unregister', {
-          scopeURL: '*'
-        }).catch(() => {
-          // Service worker clearing might not be available in all contexts
-        }),
-      ]);
-
-      // Additional JavaScript-based clearing
-      await page.evaluate(() => {
-        // Clear localStorage
-        try {
-          localStorage.clear();
-        } catch {
-          // localStorage might not be available
-        }
-        
-        // Clear sessionStorage
-        try {
-          sessionStorage.clear();
-        } catch {
-          // sessionStorage might not be available
-        }
-        
-        // Clear any cached data
-        try {
-          if ('caches' in window) {
-            caches.keys().then(names => {
-              names.forEach(name => {
-                caches.delete(name);
-              });
-            });
-          }
-        } catch {
-          // Cache API might not be available
-        }
-      });
-
-      await cdpSession.detach();
-      
-      this.executorLogger.debug('Browser data cleared successfully');
+      // First try: development mode with .ts extension
+      if (process.env.NODE_ENV !== 'production') {
+        return await import(`./pom/${this.product.pom_file}.ts`);
+      } else {
+        // Production mode: use .js extension
+        const pomFile = this.product.pom_file.endsWith('.ts') 
+          ? this.product.pom_file.replace('.ts', '.js')
+          : `${this.product.pom_file}.js`;
+        return await import(`./pom/${pomFile}`);
+      }
     } catch (error) {
-      this.executorLogger.warn(`Failed to clear browser data: ${error}`);
-      // Don't throw error as this is not critical for test execution
+      // Fallback: try the other extension
+      try {
+        if (process.env.NODE_ENV !== 'production') {
+          // Try without .ts extension in development
+          return await import(`./pom/${this.product.pom_file}`);
+        } else {
+          // Try .ts in production (shouldn't happen but just in case)
+          return await import(`./pom/${this.product.pom_file}.ts`);
+        }
+      } catch (fallbackError) {
+        throw new Error(`Could not import POM module: ${this.product.pom_file}. Tried both .ts and .js extensions. Original error: ${error}. Fallback error: ${fallbackError}`);
+      }
     }
   }
+
 
   private async performInitialLoadBenchmark(pom: POM, skipMetrics: boolean = false): Promise<void> {
     // Trigger checkout and capture performance metrics

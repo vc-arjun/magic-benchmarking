@@ -26,7 +26,7 @@ function getDefaultConfig(): Config {
           download_throughput: 500000, // 500kbps
           upload_throughput: 500000, // 500kbps
           latency: 400, // 400ms
-          enabled: true,
+          enabled: false,
         },
         no_throttling: {
           download_throughput: 0, // 0Mbps

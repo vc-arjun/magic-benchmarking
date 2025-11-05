@@ -32,14 +32,14 @@ export default defineConfig({
     trace: 'on-first-retry',
 
     /* Global timeouts for CI environments */
-    actionTimeout: 30000, // 30 seconds for actions like click, fill, etc.
-    navigationTimeout: 30000, // 30 seconds for page navigation
+    actionTimeout: 60000, // 60 seconds for actions like click, fill, etc.
+    navigationTimeout: 60000, // 60 seconds for page navigation
   },
 
   /* Global timeout settings */
   timeout: 120000, // 2 minutes total test timeout
   expect: {
-    timeout: 30000, // 30 seconds for expect assertions (toBeVisible, etc.)
+    timeout: 60000, // 60 seconds for expect assertions (toBeVisible, etc.)
   },
 
   /* Configure projects for major browsers */

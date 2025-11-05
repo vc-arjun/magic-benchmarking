@@ -27,8 +27,10 @@ class MagicCheckoutPOM implements POM {
   public async initialize(): Promise<void> {
     try {
       console.log(`Initializing POM for ${this.productConfig.name}`);
-      await this.page.goto(this.productConfig.entry_url);
-      await this.page.waitForLoadState('domcontentloaded');
+      await this.page.goto(this.productConfig.entry_url, {
+        waitUntil: 'networkidle',
+        timeout: 60000,
+      });
       console.log(`POM initialized for ${this.productConfig.name}`);
     } catch (error) {
       console.log(`Failed to initialize POM for ${this.productConfig.name}: ${error}`);

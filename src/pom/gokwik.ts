@@ -27,8 +27,10 @@ class GokwikPOM implements POM {
   public async initialize(): Promise<void> {
     try {
       console.log(`Initializing POM for ${this.productConfig.name}`);
-      await this.page.goto(this.productConfig.entry_url);
-      await this.page.waitForLoadState('domcontentloaded');
+      await this.page.goto(this.productConfig.entry_url, {
+        waitUntil: 'networkidle',
+        timeout: 60000,
+      });
       console.log(`POM initialized for ${this.productConfig.name}`);
     } catch (error) {
       console.log(`Failed to initialize POM for ${this.productConfig.name}: ${error}`);
@@ -41,7 +43,7 @@ class GokwikPOM implements POM {
       console.log(`Triggering checkout for ${this.productConfig.name}`);
 
       await this.page.getByRole('button', { name: 'Add to Cart' }).first().click();
-      await this.page.getByText('6', { exact: true }).click();
+      await this.page.getByText('6', { exact: true }).first().click();
 
       await this.page.waitForTimeout(1000);
 
