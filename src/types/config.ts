@@ -32,7 +32,6 @@ export type ExecutionConfig = {
   retry: {
     max_attempts: number;
     delay_between_retries: number;
-    save_progress_on_failure: boolean;
   };
 };
 

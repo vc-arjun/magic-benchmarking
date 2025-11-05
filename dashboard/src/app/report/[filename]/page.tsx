@@ -9,12 +9,12 @@ export async function generateStaticParams() {
     const data = JSON.parse(reports);
     return data.map((report: ReportFile) => ({
       filename: report.name,
-    })); 
+    }));
   } catch (error) {
     console.error('Error fetching reports:', error);
     return [];
   }
-};
+}
 
 const ReportDetail = ({ params }: { params: { filename: string } }) => {
   return <ReportDetailClient filename={params.filename} />;

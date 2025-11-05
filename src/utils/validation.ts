@@ -270,7 +270,7 @@ export class ExecutionConfigValidator extends BaseValidator<ExecutionConfig> {
     if (!this.isObject(retry)) {
       errors.push('Retry config must be an object');
     } else {
-      const { max_attempts, delay_between_retries, save_progress_on_failure } = retry;
+      const { max_attempts, delay_between_retries } = retry;
 
       if (!this.isPositiveNumber(max_attempts) || max_attempts < 1) {
         errors.push('Max attempts must be a positive integer >= 1');
@@ -278,10 +278,6 @@ export class ExecutionConfigValidator extends BaseValidator<ExecutionConfig> {
 
       if (!this.isNonNegativeNumber(delay_between_retries)) {
         errors.push('Delay between retries must be a non-negative number');
-      }
-
-      if (!this.isBoolean(save_progress_on_failure)) {
-        errors.push('Save progress on failure must be a boolean');
       }
     }
 

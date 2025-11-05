@@ -54,7 +54,6 @@ function getDefaultConfig(): Config {
       retry: {
         max_attempts: 3, // Total attempts (1 initial + 2 retries)
         delay_between_retries: 3000, // 3 seconds delay between retries
-        save_progress_on_failure: true, // Save progress when all retries fail
       },
     },
     output: {

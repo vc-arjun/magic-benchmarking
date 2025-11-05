@@ -107,9 +107,6 @@ export class TestExecutor {
         console.log(`   - Iteration ${failure.iteration} (${JSON.stringify(failure.combination)}): ${failure.error}`);
       }
       
-      if (this.config.execution.retry.save_progress_on_failure) {
-        console.log(`\n💾 Progress was saved for partial results during failures`);
-      }
     }
   }
 
@@ -175,7 +172,7 @@ export class TestExecutor {
         console.log(`❌ Attempt ${attempt} failed for iteration ${iteration}: ${lastError.message}`);
         
         if (attempt === maxAttempts) {
-          console.log(`💥 All ${maxAttempts} attempts failed for iteration ${iteration}. Skipping this iteration.`);
+          console.log(`💥 All ${maxAttempts} attempts failed for iteration ${iteration}. Exiting immediately to prevent partial results.`);
           
           // Track failed iteration
           this.failedIterations.push({
@@ -184,55 +181,13 @@ export class TestExecutor {
             error: lastError.message
           });
           
-          // Save current progress if configured to do so
-          if (retryConfig.save_progress_on_failure) {
-            console.log(`📊 Saving current progress before continuing...`);
-            await this.saveCurrentProgress();
-          }
-          
-          // Log the final error but don't throw - continue with next iteration
-          console.log(`⚠️  Final error for iteration ${iteration}: ${lastError.message}`);
-          return;
+          // Throw error to stop execution immediately - no partial results
+          throw new Error(`Benchmarking failed on iteration ${iteration} after ${maxAttempts} attempts: ${lastError.message}`);
         }
       }
     }
   }
 
-  /**
-   * Save current progress to avoid losing all data
-   */
-  private async saveCurrentProgress(): Promise<void> {
-    try {
-      const { ResultsManager } = await import('./results-manager');
-      const resultsManager = new ResultsManager(this.config);
-      
-      // Get current results
-      const productResults = this.getResults();
-      const networkResults = this.getNetworkResults();
-      
-      // Only save if we have some results
-      if (productResults.results.length > 0) {
-        resultsManager.addProductResults(productResults);
-        
-        if (networkResults.results && networkResults.results.length > 0) {
-          resultsManager.addNetworkResults(networkResults);
-        }
-        
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        await resultsManager.saveAllResults(
-          `partial-progress-${this.product.name}-${timestamp}`,
-          `partial-network-${this.product.name}-${timestamp}`
-        );
-        
-        console.log(`💾 Progress saved successfully`);
-      } else {
-        console.log(`📝 No results to save yet`);
-      }
-    } catch (saveError) {
-      console.log(`⚠️  Failed to save progress: ${saveError}`);
-      // Don't throw here - we want to continue execution
-    }
-  }
 
   /**
    * Run a single iteration with fresh browser process
