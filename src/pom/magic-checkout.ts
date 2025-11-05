@@ -44,6 +44,7 @@ class MagicCheckoutPOM implements POM {
       const experienceFrame = this.page
         .locator('iframe[title="Experience Checkout"]')
         .contentFrame();
+      await expect(experienceFrame.locator('body')).toBeVisible();
       const buyNowButton = experienceFrame.getByRole('button', { name: 'Buy Now' });
 
       // Ensure button is visible before starting measurement

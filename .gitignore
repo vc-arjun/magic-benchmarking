@@ -182,6 +182,8 @@ dashboard/build/
 dashboard/out/
 dashboard/public/reports.json
 dashboard/public/results/
+dashboard/public/reports/
+dashboard/public/reports-index.json
 
 # OS generated files
 .DS_Store
