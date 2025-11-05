@@ -10,12 +10,15 @@ export default defineConfig([
     extends: ["js/recommended"], 
     languageOptions: { globals: globals.browser } 
   },
+  ...tseslint.configs.recommended,
   {
     files: ["scripts/**/*.js"],
     languageOptions: { 
       globals: globals.node,
       sourceType: "commonjs"
+    },
+    rules: {
+      "@typescript-eslint/no-require-imports": "off"
     }
   },
-  ...tseslint.configs.recommended,
 ]);

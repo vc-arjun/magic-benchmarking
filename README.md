@@ -14,9 +14,7 @@ This project automates performance testing of Magic Checkout by:
 
 ### Running Benchmarks via GitHub Actions (Parallel Execution)
 
-1. Go to the **Actions** tab in your GitHub repository
-
-2. Select **"Performance Benchmarking"** workflow
+1. Go to [Performance Benchmarking](https://github.com/vc-arjun/magic-benchmarking/actions/workflows/benchmark-and-deploy.yml) workflow
 
 3. Click **"Run workflow"** and configure the inputs:
    - **iterations**: Iterations per combination (e.g., 20 iterations per network/CPU combo)
@@ -32,22 +30,6 @@ This project automates performance testing of Magic Checkout by:
    - **Execute jobs concurrently** to reduce total execution time
    - **Consolidate results** from all jobs into a single comprehensive report
    - **Deploy the dashboard** only if all jobs succeed
-
-### Example Execution Plan
-```
-Input: 20 iterations per combination, max 15 per job
-Network conditions: slow_4g=true, no_throttling=true (2 conditions)
-CPU conditions: no_throttling=true (1 condition)
-Total combinations: 2 × 1 = 2
-Total iterations: 20 × 2 = 40
-Parallel jobs: 40 ÷ 15 = 3 jobs (15, 15, 10 iterations each)
-```
-
-### Benefits of Parallel Execution
-- ⚡ **Faster execution**: 40 iterations in ~20 minutes instead of 60+ minutes
-- 🛡️ **CI-friendly**: Each job stays within timeout limits (25 minutes max)
-- 🔒 **Reliable**: Deployment only happens if ALL jobs succeed
-- 📊 **Accurate**: Results are properly consolidated with correct statistics
 
 ## Development
 
