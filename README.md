@@ -2,6 +2,19 @@
 
 A comprehensive performance benchmarking framework for Magic Checkout using Playwright automation with a Next.js dashboard for visualization and analysis.
 
+## 🆕 Recent Updates
+
+### Latest Features & Improvements
+
+- **🔧 Enhanced Environment Configuration**: Comprehensive environment variable support with detailed documentation and examples
+- **📊 Advanced Dashboard**: Interactive Next.js dashboard with rich visualizations, filtering, and export capabilities
+- **🎯 Page Object Model Architecture**: Extensible POM design pattern for easy addition of new products
+- **🌐 Network Analysis**: Detailed network request monitoring and waterfall visualization
+- **⚡ Performance Optimizations**: Improved caching, memoization, and data processing
+- **🛡️ Robust Error Handling**: Enhanced retry mechanisms and graceful error recovery
+- **📈 Statistical Analysis**: Comprehensive metrics with statistical summaries and trend analysis
+- **🔍 Debug & Monitoring**: Enhanced logging with structured output and performance tracking
+
 ## 🎯 Overview
 
 This project provides an end-to-end solution for measuring and analyzing the performance of Magic Checkout against competitors. It automates browser testing, captures detailed performance metrics, monitors network requests, and provides rich visualizations through an interactive dashboard.
@@ -25,6 +38,8 @@ This project provides an end-to-end solution for measuring and analyzing the per
 - [Usage](#usage)
 - [Dashboard](#dashboard)
 - [API Reference](#api-reference)
+- [Page Object Model (POM) Architecture](#page-object-model-pom-architecture)
+- [Adding New Products to the Framework](#adding-new-products-to-the-framework)
 - [Contributing](#contributing)
 - [Troubleshooting](#troubleshooting)
 
@@ -189,19 +204,113 @@ export const CONFIG: Config = {
 
 ### Environment Variables
 
+Create a `.env` file in the project root to configure the framework. Here's a complete example:
+
 ```bash
-# Development/Production mode
+# =============================================================================
+# GENERAL CONFIGURATION
+# =============================================================================
+
+# Environment mode (development/production)
+# Affects logging level and other development features
 NODE_ENV=development
 
-# Logging configuration
+# =============================================================================
+# LOGGING CONFIGURATION
+# =============================================================================
+
+# Log level (debug, info, warn, error)
+# In development: defaults to debug, in production: defaults to info
 LOG_LEVEL=info
+
+# Enable file logging (true/false)
+# When enabled, logs will be written to the specified file path
 ENABLE_FILE_LOGGING=false
+
+# Log file path (only used when ENABLE_FILE_LOGGING=true)
+# Directory will be created automatically if it doesn't exist
 LOG_FILE_PATH=./logs/app.log
 
-# Test configuration
-SILENT_TESTS=true
+# =============================================================================
+# PLAYWRIGHT/BROWSER CONFIGURATION
+# =============================================================================
+
+# Run Playwright in headless mode (true/false)
+# Set to false for debugging, true for CI/automated runs
 PLAYWRIGHT_HEADLESS=true
+
+# Silent test execution (true/false)
+# Reduces console output during test execution
+SILENT_TESTS=true
+
+# CI environment indicator (automatically set by CI systems)
+# Used by Playwright for retry and worker configuration
+# CI=true
+
+# =============================================================================
+# BENCHMARKING CONFIGURATION
+# =============================================================================
+
+# Complete JSON configuration (alternative to individual settings below)
+# If provided, this takes precedence over individual environment variables
+# MAGIC_BENCHMARKING_CONFIG={"products":[...], "execution_matrix":{...}, ...}
+
+# Number of iterations to run for each test condition
+# Higher values provide more statistical accuracy but take longer
+BENCHMARK_ITERATIONS=20
+
+# =============================================================================
+# NETWORK CONDITIONS
+# =============================================================================
+
+# Enable slow 4G network throttling (true/false)
+# Simulates 500kbps download/upload with 400ms latency
+BENCHMARK_NETWORK_SLOW_4G=true
+
+# Enable no network throttling (true/false)
+# Tests with full network speed
+BENCHMARK_NETWORK_NO_THROTTLING=true
+
+# =============================================================================
+# CPU CONDITIONS
+# =============================================================================
+
+# Enable 4x CPU slowdown (true/false)
+# Simulates slower devices by throttling CPU
+BENCHMARK_CPU_4X_SLOWDOWN=false
+
+# Enable no CPU throttling (true/false)
+# Tests with full CPU performance
+BENCHMARK_CPU_NO_THROTTLING=true
+
+# =============================================================================
+# EXAMPLE CONFIGURATIONS
+# =============================================================================
+
+# Quick testing (fewer iterations, basic conditions)
+# BENCHMARK_ITERATIONS=5
+# BENCHMARK_NETWORK_SLOW_4G=false
+# BENCHMARK_NETWORK_NO_THROTTLING=true
+# BENCHMARK_CPU_4X_SLOWDOWN=false
+# BENCHMARK_CPU_NO_THROTTLING=true
+
+# Comprehensive testing (more iterations, all conditions)
+# BENCHMARK_ITERATIONS=50
+# BENCHMARK_NETWORK_SLOW_4G=true
+# BENCHMARK_NETWORK_NO_THROTTLING=true
+# BENCHMARK_CPU_4X_SLOWDOWN=true
+# BENCHMARK_CPU_NO_THROTTLING=true
+
+# CI/Production testing (headless, file logging)
+# NODE_ENV=production
+# PLAYWRIGHT_HEADLESS=true
+# SILENT_TESTS=true
+# ENABLE_FILE_LOGGING=true
+# LOG_FILE_PATH=./logs/benchmark.log
+# LOG_LEVEL=info
 ```
+
+> **💡 Tip**: Copy the `.env.example` file to `.env` and modify the values as needed for your environment.
 
 ## 📖 Usage
 
@@ -425,6 +534,317 @@ docs(readme): update installation instructions
 2. Add configuration entry
 3. Implement required methods
 4. Add error handling and logging
+
+## 🎯 Page Object Model (POM) Architecture
+
+### What is POM?
+
+The **Page Object Model (POM)** is a design pattern that creates an abstraction layer between your test automation code and the web pages being tested. In the Magic Benchmarking Framework, POM classes encapsulate the interactions with specific checkout products, making the framework easily extensible to support new products.
+
+### Key Benefits
+
+- **🔧 Maintainability**: Changes to UI elements only require updates in one place
+- **♻️ Reusability**: Common interactions can be shared across different test scenarios
+- **📖 Readability**: Tests become more readable and self-documenting
+- **🧪 Testability**: Easier to mock and unit test individual components
+- **🔀 Scalability**: Easy to add support for new products without modifying core logic
+
+### POM Interface
+
+All POM classes must implement the `POM` interface:
+
+```typescript
+export interface POM {
+  initialize(): Promise<void>;
+  triggerCheckout(skipMetrics: boolean): Promise<void>;
+}
+```
+
+### Current Implementation: Magic Checkout
+
+The framework includes a complete POM implementation for Magic Checkout (`src/pom/magic-checkout.ts`):
+
+```typescript
+class MagicCheckoutPOM implements POM {
+  private page: Page;
+  private productConfig: ProductConfig;
+  private performanceMonitor: PerformanceMonitor;
+  private networkMonitor: NetworkMonitor;
+
+  // Core methods
+  public async initialize(): Promise<void> {
+    // Navigate to entry URL and wait for page load
+  }
+
+  public async triggerCheckout(skipMetrics: boolean = false): Promise<void> {
+    // Trigger checkout flow and measure performance metrics
+  }
+}
+```
+
+### Performance Metrics Captured
+
+The POM captures these key performance metrics:
+
+- **`click_to_popup`**: Time from button click to popup appearance
+- **`popup_to_content`**: Time from popup to content visibility
+- **`click_to_content`**: Total time from click to content ready
+- **`total_load_time`**: Complete loading time until main thread idle
+- **`content_to_interactive`**: Time from content visible to interactive
+
+## 🚀 Adding New Products to the Framework
+
+### Step 1: Create Product Configuration
+
+Add your product to the configuration in `src/config.ts`:
+
+```typescript
+const defaultConfig = {
+  products: [
+    {
+      name: 'MagicCheckout',
+      entry_url: 'https://razorpay.com/demopg3/',
+      pom_file: 'magic-checkout',
+      enabled: true,
+    },
+    // Add your new product here
+    {
+      name: 'YourProduct',
+      entry_url: 'https://your-product-demo.com/',
+      pom_file: 'your-product',
+      enabled: true,
+    },
+  ],
+  // ... rest of configuration
+};
+```
+
+### Step 2: Create POM Implementation
+
+Create a new POM file in `src/pom/your-product.ts`:
+
+```typescript
+import { Page } from 'playwright';
+import { POM } from '../types/pom';
+import { ProductConfig } from '../types/config';
+import { expect } from '@playwright/test';
+import { PerformanceMonitor } from '../performance';
+import { NetworkMonitor } from '../network-monitor';
+import { PERFORMANCE_MARKERS } from '../constants/performance';
+
+class YourProductPOM implements POM {
+  private page: Page;
+  private productConfig: ProductConfig;
+  private performanceMonitor: PerformanceMonitor;
+  private networkMonitor: NetworkMonitor;
+
+  constructor(
+    page: Page,
+    productConfig: ProductConfig,
+    performanceMonitor: PerformanceMonitor,
+    networkMonitor: NetworkMonitor
+  ) {
+    this.page = page;
+    this.productConfig = productConfig;
+    this.performanceMonitor = performanceMonitor;
+    this.networkMonitor = networkMonitor;
+  }
+
+  public async initialize(): Promise<void> {
+    try {
+      console.log(`Initializing POM for ${this.productConfig.name}`);
+      await this.page.goto(this.productConfig.entry_url);
+      await this.page.waitForLoadState('domcontentloaded');
+      console.log(`POM initialized for ${this.productConfig.name}`);
+    } catch (error) {
+      console.log(`Failed to initialize POM for ${this.productConfig.name}: ${error}`);
+      throw error;
+    }
+  }
+
+  public async triggerCheckout(skipMetrics: boolean = false): Promise<void> {
+    try {
+      console.log(`Triggering checkout for ${this.productConfig.name}`);
+
+      // 1. Find and interact with checkout trigger element
+      const checkoutButton = this.page.locator('[data-testid="checkout-button"]');
+      await expect(checkoutButton).toBeVisible();
+
+      // 2. Mark start time
+      await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.CHECKOUT_START);
+
+      // 3. Trigger checkout
+      await checkoutButton.click();
+
+      // 4. Wait for checkout interface and mark popup appearance
+      const checkoutModal = this.page.locator('[data-testid="checkout-modal"]');
+      await expect(checkoutModal).toBeVisible();
+      await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.POPUP_APPEARS);
+
+      // 5. Start network monitoring
+      if (!skipMetrics) {
+        await this.networkMonitor.startMonitoring();
+      }
+
+      // 6. Wait for content to be ready and mark content appearance
+      const contentElement = this.page.locator('[data-testid="checkout-content"]');
+      await expect(contentElement).toBeVisible();
+      await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.CONTENT_APPEARS);
+
+      // 7. Wait for main thread idle and mark
+      const idleTimestamp = await this.performanceMonitor.waitForMainThreadIdle();
+      await this.performanceMonitor.markAtTimestamp(
+        PERFORMANCE_MARKERS.MAIN_THREAD_IDLE,
+        idleTimestamp
+      );
+
+      // 8. Stop network monitoring
+      if (!skipMetrics) {
+        await this.networkMonitor.stopMonitoring();
+      }
+
+      // 9. Calculate and record metrics
+      if (!skipMetrics) {
+        const metrics = [
+          {
+            name: 'click_to_popup' as const,
+            start: PERFORMANCE_MARKERS.CHECKOUT_START,
+            end: PERFORMANCE_MARKERS.POPUP_APPEARS,
+          },
+          {
+            name: 'popup_to_content' as const,
+            start: PERFORMANCE_MARKERS.POPUP_APPEARS,
+            end: PERFORMANCE_MARKERS.CONTENT_APPEARS,
+          },
+          {
+            name: 'click_to_content' as const,
+            start: PERFORMANCE_MARKERS.CHECKOUT_START,
+            end: PERFORMANCE_MARKERS.CONTENT_APPEARS,
+          },
+          {
+            name: 'total_load_time' as const,
+            start: PERFORMANCE_MARKERS.CHECKOUT_START,
+            end: PERFORMANCE_MARKERS.MAIN_THREAD_IDLE,
+          },
+          {
+            name: 'content_to_interactive' as const,
+            start: PERFORMANCE_MARKERS.CONTENT_APPEARS,
+            end: PERFORMANCE_MARKERS.MAIN_THREAD_IDLE,
+          },
+        ];
+
+        for (const metric of metrics) {
+          const duration = await this.performanceMonitor.measureDuration(metric.start, metric.end);
+          this.performanceMonitor.recordMetric(metric.name, duration, 'ms');
+        }
+      }
+
+      console.log(`✅ Checkout triggered successfully for ${this.productConfig.name}`);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.log(`❌ Failed to trigger checkout for ${this.productConfig.name}: ${errorMessage}`);
+      throw error;
+    }
+  }
+}
+
+export default YourProductPOM;
+```
+
+### Step 3: Update POM Factory (if needed)
+
+If you have a POM factory pattern, update it to include your new product:
+
+```typescript
+// In executor.ts or similar file
+const pomModule = await import(`./pom/${product.pom_file}`);
+const POMClass = pomModule.default;
+const pom = new POMClass(page, product, performanceMonitor, networkMonitor);
+```
+
+### Step 4: Test Your Implementation
+
+1. **Enable your product** in the configuration
+2. **Run a test** to verify the POM works correctly:
+   ```bash
+   npm run dev
+   ```
+3. **Check the results** in the dashboard to ensure metrics are captured
+
+### Best Practices for POM Development
+
+#### 1. **Robust Element Selection**
+```typescript
+// ✅ Good: Use data attributes or stable selectors
+const button = this.page.locator('[data-testid="checkout-button"]');
+
+// ❌ Avoid: Fragile selectors that may break
+const button = this.page.locator('.btn.btn-primary.checkout-btn');
+```
+
+#### 2. **Proper Error Handling**
+```typescript
+try {
+  await this.page.locator('[data-testid="element"]').click();
+} catch (error) {
+  console.log(`Failed to click element: ${error}`);
+  throw error; // Re-throw to maintain error flow
+}
+```
+
+#### 3. **Consistent Timing Measurements**
+```typescript
+// Always follow this pattern for consistent metrics
+await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.CHECKOUT_START);
+// ... perform action
+await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.POPUP_APPEARS);
+// ... wait for next milestone
+```
+
+#### 4. **Network Monitoring**
+```typescript
+// Start monitoring after the initial action
+if (!skipMetrics) {
+  await this.networkMonitor.startMonitoring();
+}
+
+// Stop monitoring when interaction is complete
+if (!skipMetrics) {
+  await this.networkMonitor.stopMonitoring();
+}
+```
+
+#### 5. **Comprehensive Logging**
+```typescript
+console.log(`🔍 Starting ${this.productConfig.name} checkout process`);
+console.log(`✅ ${this.productConfig.name} checkout completed successfully`);
+console.log(`❌ ${this.productConfig.name} checkout failed: ${errorMessage}`);
+```
+
+### Troubleshooting New POM Implementations
+
+#### Common Issues
+
+1. **Element not found**: Use `await expect(element).toBeVisible()` before interacting
+2. **Timing issues**: Add appropriate waits for network requests or animations
+3. **Iframe handling**: Use `contentFrame()` for iframe interactions
+4. **Network monitoring**: Ensure monitoring starts after the initial trigger action
+
+#### Debug Mode
+
+Run with debug mode to see detailed execution:
+```bash
+export LOG_LEVEL=debug
+npm run debug
+```
+
+#### Playwright Inspector
+
+Use Playwright's built-in inspector for step-by-step debugging:
+```bash
+export PWDEBUG=1
+npm run dev
+```
 
 ## 🔍 Troubleshooting
 
