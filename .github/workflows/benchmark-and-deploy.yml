@@ -3,10 +3,31 @@ name: Benchmark and Deploy (Split Jobs)
 on:
   workflow_dispatch:
     inputs:
-      config:
-        description: 'Custom configuration JSON (optional - uses default if not provided)'
+      iterations:
+        description: 'Number of iterations to run (default: 20)'
         required: false
+        default: '20'
         type: string
+      network_slow_4g:
+        description: 'Enable Slow 4G network throttling'
+        required: false
+        default: false
+        type: boolean
+      network_no_throttling:
+        description: 'Enable No throttling network condition'
+        required: false
+        default: false
+        type: boolean
+      cpu_4x_slowdown:
+        description: 'Enable 4x CPU slowdown'
+        required: false
+        default: false
+        type: boolean
+      cpu_no_throttling:
+        description: 'Enable No throttling CPU condition'
+        required: false
+        default: false
+        type: boolean
       override_reports:
         description: 'Override existing reports instead of concatenating (default: false)'
         required: false
@@ -50,10 +71,73 @@ jobs:
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
 
+      - name: Build configuration from inputs
+        id: build-config
+        run: |
+          # Ensure at least one condition is enabled (fallback to no_throttling)
+          network_no_throttling="${{ github.event.inputs.network_no_throttling }}"
+          network_slow_4g="${{ github.event.inputs.network_slow_4g }}"
+          cpu_no_throttling="${{ github.event.inputs.cpu_no_throttling }}"
+          cpu_4x_slowdown="${{ github.event.inputs.cpu_4x_slowdown }}"
+          
+          # If no network conditions selected, default to no_throttling
+          if [ "$network_no_throttling" != "true" ] && [ "$network_slow_4g" != "true" ]; then
+            network_no_throttling="true"
+            echo "⚠️  No network conditions selected, defaulting to no_throttling"
+          fi
+          
+          # If no CPU conditions selected, default to no_throttling  
+          if [ "$cpu_no_throttling" != "true" ] && [ "$cpu_4x_slowdown" != "true" ]; then
+            cpu_no_throttling="true"
+            echo "⚠️  No CPU conditions selected, defaulting to no_throttling"
+          fi
+          
+          # Build the complete config JSON with execution_matrix
+          config_json=$(cat << EOF
+          {
+            "execution": {
+              "iterations": ${{ github.event.inputs.iterations }}
+            },
+            "execution_matrix": {
+              "network": {
+                "slow_4g": {
+                  "download_throughput": 500000,
+                  "upload_throughput": 500000,
+                  "latency": 400,
+                  "enabled": $network_slow_4g
+                },
+                "no_throttling": {
+                  "download_throughput": 0,
+                  "upload_throughput": 0,
+                  "latency": 0,
+                  "enabled": $network_no_throttling
+                }
+              },
+              "cpu": {
+                "no_throttling": {
+                  "rate": 1,
+                  "enabled": $cpu_no_throttling
+                },
+                "4x_slowdown": {
+                  "rate": 4,
+                  "enabled": $cpu_4x_slowdown
+                }
+              }
+            }
+          }
+          EOF
+          )
+          
+          echo "Generated config:"
+          echo "$config_json"
+          echo "BENCHMARK_CONFIG<<EOF" >> $GITHUB_OUTPUT
+          echo "$config_json" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Run benchmarking
         run: npm start
         env:
-          MAGIC_BENCHMARKING_CONFIG: ${{ github.event.inputs.config }}
+          MAGIC_BENCHMARKING_CONFIG: ${{ steps.build-config.outputs.BENCHMARK_CONFIG }}
 
       - name: Upload benchmark results
         id: upload-results
