@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       iterations:
-        description: 'Number of iterations per combination (e.g., 20 iterations × 2 network conditions = 40 total)'
+        description: 'Number of iterations per combination per product (e.g., 20 iterations * 2 network conditions * 2 products = 80 total)'
         required: false
         default: '20'
         type: string
@@ -43,6 +43,16 @@ on:
         required: false
         default: false
         type: boolean
+      product_magic_checkout:
+        description: 'Enable Magic Checkout product testing'
+        required: false
+        default: true
+        type: boolean
+      product_gokwik:
+        description: 'Enable Gokwik product testing'
+        required: false
+        default: true
+        type: boolean
 
 jobs:
   # Calculate execution matrix and job distribution
@@ -54,6 +64,7 @@ jobs:
       total_jobs: ${{ steps.calculate.outputs.total_jobs }}
       total_iterations: ${{ steps.calculate.outputs.total_iterations }}
       combinations_count: ${{ steps.calculate.outputs.combinations_count }}
+      products_count: ${{ steps.calculate.outputs.products_count }}
     steps:
       - name: Calculate job matrix and total iterations
         id: calculate
@@ -62,7 +73,18 @@ jobs:
           iterations_per_combo=${{ github.event.inputs.iterations }}
           max_per_job=${{ github.event.inputs.max_iterations_per_job }}
           
-          # Count enabled combinations
+          # Count enabled products
+          products=0
+          if [ "${{ github.event.inputs.product_magic_checkout }}" = "true" ]; then products=$((products + 1)); fi
+          if [ "${{ github.event.inputs.product_gokwik }}" = "true" ]; then products=$((products + 1)); fi
+          
+          # Ensure at least one product is enabled
+          if [ $products -eq 0 ]; then
+            echo "❌ Error: At least one product must be enabled"
+            exit 1
+          fi
+          
+          # Count enabled network/CPU combinations
           combinations=0
           if [ "${{ github.event.inputs.network_slow_4g }}" = "true" ]; then
             if [ "${{ github.event.inputs.cpu_no_throttling }}" = "true" ]; then combinations=$((combinations + 1)); fi
@@ -73,13 +95,14 @@ jobs:
             if [ "${{ github.event.inputs.cpu_4x_slowdown }}" = "true" ]; then combinations=$((combinations + 1)); fi
           fi
           
-          # Calculate total iterations across all combinations
-          total_iterations=$((iterations_per_combo * combinations))
+          # Calculate total iterations across all combinations and products
+          total_iterations=$((iterations_per_combo * combinations * products))
           
           echo "📊 Execution Plan:"
-          echo "  Iterations per combination: $iterations_per_combo"
-          echo "  Enabled combinations: $combinations"
-          echo "  Total iterations: $total_iterations"
+          echo "  Iterations per combination per product: $iterations_per_combo"
+          echo "  Enabled products: $products"
+          echo "  Enabled network/CPU combinations: $combinations"
+          echo "  Total iterations: $total_iterations (${iterations_per_combo} × ${combinations} × ${products})"
           echo "  Max iterations per job: $max_per_job"
           
           # Calculate number of parallel jobs needed based on total iterations
@@ -89,11 +112,11 @@ jobs:
           # Generate job matrix - distribute iterations evenly across jobs
           matrix="["
           
-          # Calculate base iterations per combination per job
+          # Calculate base iterations per combination per product per job
           base_iterations_per_combo=$(( iterations_per_combo / total_jobs ))
           extra_iterations=$(( iterations_per_combo % total_jobs ))
           
-          echo "  Base iterations per combo per job: $base_iterations_per_combo"
+          echo "  Base iterations per combo per product per job: $base_iterations_per_combo"
           echo "  Extra iterations to distribute: $extra_iterations"
           
           for i in $(seq 1 $total_jobs); do
@@ -110,14 +133,14 @@ jobs:
               continue
             fi
             
-            job_total_iterations=$((job_iterations_per_combo * combinations))
+            job_total_iterations=$((job_iterations_per_combo * combinations * products))
             
             if [ $i -gt 1 ]; then
               matrix="$matrix,"
             fi
             matrix="$matrix{\"job_id\":$i,\"iterations_per_combo\":$job_iterations_per_combo,\"total_iterations\":$job_total_iterations}"
             
-            echo "  Job $i: $job_iterations_per_combo iterations per combination ($job_total_iterations total)"
+            echo "  Job $i: $job_iterations_per_combo iterations per combo per product ($job_total_iterations total)"
           done
           matrix="$matrix]"
           
@@ -126,6 +149,7 @@ jobs:
           echo "total_jobs=$total_jobs" >> $GITHUB_OUTPUT
           echo "total_iterations=$total_iterations" >> $GITHUB_OUTPUT
           echo "combinations_count=$combinations" >> $GITHUB_OUTPUT
+          echo "products_count=$products" >> $GITHUB_OUTPUT
 
   # Run parallel benchmark jobs
   benchmarking:
@@ -173,6 +197,8 @@ jobs:
           BENCHMARK_NETWORK_NO_THROTTLING: ${{ github.event.inputs.network_no_throttling }}
           BENCHMARK_CPU_4X_SLOWDOWN: ${{ github.event.inputs.cpu_4x_slowdown }}
           BENCHMARK_CPU_NO_THROTTLING: ${{ github.event.inputs.cpu_no_throttling }}
+          BENCHMARK_PRODUCT_MAGIC_CHECKOUT: ${{ github.event.inputs.product_magic_checkout }}
+          BENCHMARK_PRODUCT_GOKWIK: ${{ github.event.inputs.product_gokwik }}
           PLAYWRIGHT_HEADLESS: true
           SILENT_TESTS: true
           LOG_LEVEL: info
@@ -233,7 +259,8 @@ jobs:
         run: |
           echo "🔄 Consolidating results from ${{ needs.calculate-matrix.outputs.total_jobs }} parallel jobs..."
           echo "📊 Total iterations processed: ${{ needs.calculate-matrix.outputs.total_iterations }}"
-          echo "🔗 Combinations tested: ${{ needs.calculate-matrix.outputs.combinations_count }}"
+          echo "🛍️ Products tested: ${{ needs.calculate-matrix.outputs.products_count }}"
+          echo "🔗 Network/CPU combinations tested: ${{ needs.calculate-matrix.outputs.combinations_count }}"
           
           node ./scripts/consolidate-results.js ./temp-results
           
@@ -348,9 +375,10 @@ jobs:
           echo "=" * 50
           if [ "${{ github.event.inputs.skip_benchmarking }}" != "true" ]; then
             echo "🎯 Configuration:"
-            echo "  Iterations per combination: ${{ github.event.inputs.iterations }}"
+            echo "  Iterations per combination per product: ${{ github.event.inputs.iterations }}"
             echo "  Max iterations per job: ${{ github.event.inputs.max_iterations_per_job }}"
-            echo "  Total combinations: ${{ needs.calculate-matrix.outputs.combinations_count }}"
+            echo "  Products tested: ${{ needs.calculate-matrix.outputs.products_count }}"
+            echo "  Network/CPU combinations: ${{ needs.calculate-matrix.outputs.combinations_count }}"
             echo "  Total iterations: ${{ needs.calculate-matrix.outputs.total_iterations }}"
             echo "  Parallel jobs: ${{ needs.calculate-matrix.outputs.total_jobs }}"
             echo ""

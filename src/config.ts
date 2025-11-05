@@ -104,6 +104,8 @@ function loadConfigFromEnv(): Config {
     process.env.BENCHMARK_NETWORK_SLOW_4G ||
     process.env.BENCHMARK_NETWORK_NO_THROTTLING ||
     process.env.BENCHMARK_CPU_4X_SLOWDOWN ||
+    process.env.BENCHMARK_PRODUCT_GOKWIK ||
+    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT ||
     process.env.BENCHMARK_CPU_NO_THROTTLING;
 
   if (hasIndividualEnvVars) {
@@ -132,6 +134,15 @@ function buildConfigFromIndividualEnvVars(): Config {
   const cpu4xSlowdown = process.env.BENCHMARK_CPU_4X_SLOWDOWN === 'true';
   const cpuNoThrottling = process.env.BENCHMARK_CPU_NO_THROTTLING === 'true';
 
+  const productMagicCheckout =
+    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === undefined
+      ? true
+      : process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === 'true';
+  const productGokwik =
+    process.env.BENCHMARK_PRODUCT_GOKWIK === undefined
+      ? true
+      : process.env.BENCHMARK_PRODUCT_GOKWIK === 'true';
+
   // Apply smart defaults: if no conditions are selected, enable no_throttling for both
   const finalNetworkNoThrottling = networkNoThrottling || (!networkSlow4g && !networkNoThrottling);
   const finalCpuNoThrottling = cpuNoThrottling || (!cpu4xSlowdown && !cpuNoThrottling);
@@ -150,6 +161,15 @@ function buildConfigFromIndividualEnvVars(): Config {
 
   return {
     ...defaultConfig,
+    products: defaultConfig.products.map((p) => ({
+      ...p,
+      enabled:
+        p.name === 'MagicCheckout'
+          ? productMagicCheckout
+          : p.name === 'Gokwik'
+            ? productGokwik
+            : p.enabled,
+    })),
     execution: {
       ...defaultConfig.execution,
       iterations,
