@@ -28,7 +28,7 @@ class MagicCheckoutPOM implements POM {
     try {
       console.log(`Initializing POM for ${this.productConfig.name}`);
       await this.page.goto(this.productConfig.entry_url, {
-        waitUntil: 'networkidle',
+        waitUntil: 'domcontentloaded',
         timeout: 60000,
       });
       console.log(`POM initialized for ${this.productConfig.name}`);
@@ -47,13 +47,13 @@ class MagicCheckoutPOM implements POM {
         .locator('iframe[title="Experience Checkout"]')
         .contentFrame();
       await expect(experienceFrame.locator('body')).toBeVisible({
-        timeout: 30000,
+        timeout: 60000,
       });
       const buyNowButton = experienceFrame.getByRole('button', { name: 'Buy Now' });
 
       // Ensure button is visible before starting measurement
       await expect(buyNowButton).toBeVisible({
-        timeout: 30000,
+        timeout: 60000,
       });
 
       // Mark the start time just before clicking (start of all measurements)
