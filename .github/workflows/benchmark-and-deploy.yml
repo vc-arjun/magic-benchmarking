@@ -82,26 +82,42 @@ jobs:
           echo "  Total iterations: $total_iterations"
           echo "  Max iterations per job: $max_per_job"
           
-          # Calculate number of parallel jobs needed
+          # Calculate number of parallel jobs needed based on total iterations
           total_jobs=$(( (total_iterations + max_per_job - 1) / max_per_job ))
           echo "  Parallel jobs needed: $total_jobs"
           
-          # Generate job matrix
+          # Generate job matrix - distribute iterations evenly across jobs
           matrix="["
+          
+          # Calculate base iterations per combination per job
+          base_iterations_per_combo=$(( iterations_per_combo / total_jobs ))
+          extra_iterations=$(( iterations_per_combo % total_jobs ))
+          
+          echo "  Base iterations per combo per job: $base_iterations_per_combo"
+          echo "  Extra iterations to distribute: $extra_iterations"
+          
           for i in $(seq 1 $total_jobs); do
-            start_iteration=$(( (i - 1) * max_per_job + 1 ))
-            end_iteration=$(( i * max_per_job ))
-            if [ $end_iteration -gt $total_iterations ]; then
-              end_iteration=$total_iterations
+            # Calculate iterations per combination for this job
+            job_iterations_per_combo=$base_iterations_per_combo
+            
+            # Distribute extra iterations to first few jobs
+            if [ $i -le $extra_iterations ]; then
+              job_iterations_per_combo=$((job_iterations_per_combo + 1))
             fi
-            actual_iterations=$(( end_iteration - start_iteration + 1 ))
+            
+            # Skip jobs with 0 iterations
+            if [ $job_iterations_per_combo -eq 0 ]; then
+              continue
+            fi
+            
+            job_total_iterations=$((job_iterations_per_combo * combinations))
             
             if [ $i -gt 1 ]; then
               matrix="$matrix,"
             fi
-            matrix="$matrix{\"job_id\":$i,\"iterations\":$actual_iterations}"
+            matrix="$matrix{\"job_id\":$i,\"iterations_per_combo\":$job_iterations_per_combo,\"total_iterations\":$job_total_iterations}"
             
-            echo "  Job $i: $actual_iterations iterations"
+            echo "  Job $i: $job_iterations_per_combo iterations per combination ($job_total_iterations total)"
           done
           matrix="$matrix]"
           
@@ -150,7 +166,7 @@ jobs:
       - name: Run benchmarking
         run: npm start
         env:
-          BENCHMARK_ITERATIONS: ${{ matrix.iterations }}
+          BENCHMARK_ITERATIONS: ${{ matrix.iterations_per_combo }}
           BENCHMARK_JOB_ID: ${{ matrix.job_id }}
           BENCHMARK_TOTAL_JOBS: ${{ needs.calculate-matrix.outputs.total_jobs }}
           BENCHMARK_NETWORK_SLOW_4G: ${{ github.event.inputs.network_slow_4g }}
