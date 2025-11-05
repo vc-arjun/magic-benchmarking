@@ -243,7 +243,10 @@ export class TestExecutor {
         headless: this.config.execution.headless,
         timeout: this.config.execution.timeout,
         userAgent,
-        viewport: { width: 1920, height: 1080 },
+        viewport: { 
+          width: this.config.execution.viewport.width, 
+          height: this.config.execution.viewport.height 
+        },
         // Additional isolation settings
         ignoreHTTPSErrors: false,
         bypassCSP: false,

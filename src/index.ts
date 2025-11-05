@@ -10,6 +10,10 @@ const main = async () => {
 
   for (const product of CONFIG.products) {
     try {
+      if (!product.enabled) {
+        console.log(`Skipping ${product.name} as it is not enabled`);
+        continue;
+      }
       console.log(`\nBenchmarking performance of ${product.name}`);
       const testExecutor = new TestExecutor(product);
       await testExecutor.run();

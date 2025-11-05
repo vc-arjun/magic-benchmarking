@@ -236,7 +236,7 @@ export class ExecutionConfigValidator extends BaseValidator<ExecutionConfig> {
       return this.createResult(false, undefined, ['Execution config must be an object']);
     }
 
-    const { iterations, timeout, headless, browsers, retry } = input;
+    const { iterations, timeout, headless, browsers, viewport, retry } = input;
 
     // Validate iterations
     if (!this.isPositiveNumber(iterations) || iterations < 1) {
@@ -263,6 +263,21 @@ export class ExecutionConfigValidator extends BaseValidator<ExecutionConfig> {
         errors.push(
           `Invalid browsers: ${invalidBrowsers.join(', ')}. Valid options: ${validBrowsers.join(', ')}`
         );
+      }
+    }
+
+    // Validate viewport config
+    if (!this.isObject(viewport)) {
+      errors.push('Viewport config must be an object');
+    } else {
+      const { width, height } = viewport;
+
+      if (!this.isPositiveNumber(width) || width < 320) {
+        errors.push('Viewport width must be a positive number >= 320');
+      }
+
+      if (!this.isPositiveNumber(height) || height < 240) {
+        errors.push('Viewport height must be a positive number >= 240');
       }
     }
 

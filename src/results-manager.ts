@@ -119,6 +119,7 @@ export class ResultsManager {
         timeout: this.config.execution.timeout,
         headless: this.config.execution.headless,
         retry: this.config.execution.retry,
+        viewport: this.config.execution.viewport,
       },
       execution_matrix: this.config.execution_matrix,
       metrics_metadata: metricsMetadata,

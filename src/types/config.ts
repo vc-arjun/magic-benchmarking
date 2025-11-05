@@ -24,11 +24,17 @@ export type UserStateConfig = {
 
 export type BrowserType = 'chromium' | 'firefox' | 'webkit';
 
+export type ViewportConfig = {
+  width: number;
+  height: number;
+};
+
 export type ExecutionConfig = {
   iterations: number;
   timeout: number;
   headless: boolean;
   browsers: BrowserType[];
+  viewport: ViewportConfig;
   retry: {
     max_attempts: number;
     delay_between_retries: number;
