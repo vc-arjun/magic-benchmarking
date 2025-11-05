@@ -31,16 +31,6 @@ const main = async () => {
       }
     } catch (error) {
       console.error(`Failed to benchmark performance of ${product.name}: ${error}`);
-      
-      // Save any partial results before exiting
-      console.log(`💾 Attempting to save any partial results before exiting...`);
-      try {
-        await resultsManager.saveAllResults();
-        console.log(`✅ Partial results saved successfully`);
-      } catch (saveError) {
-        console.error(`❌ Failed to save partial results: ${saveError}`);
-      }
-      
       process.exit(1);
     }
   }

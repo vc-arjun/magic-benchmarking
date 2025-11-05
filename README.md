@@ -192,7 +192,6 @@ export const CONFIG: Config = {
     retry: {
       max_attempts: 3,
       delay_between_retries: 3000,
-      save_progress_on_failure: true,
     },
   },
   output: {

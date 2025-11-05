@@ -172,7 +172,7 @@ export class TestExecutor {
         console.log(`❌ Attempt ${attempt} failed for iteration ${iteration}: ${lastError.message}`);
         
         if (attempt === maxAttempts) {
-          console.log(`💥 All ${maxAttempts} attempts failed for iteration ${iteration}. Exiting immediately to prevent partial results.`);
+          console.log(`💥 All ${maxAttempts} attempts failed for iteration ${iteration}. Stopping execution.`);
           
           // Track failed iteration
           this.failedIterations.push({
@@ -181,7 +181,7 @@ export class TestExecutor {
             error: lastError.message
           });
           
-          // Throw error to stop execution immediately - no partial results
+          // Throw error to stop execution immediately
           throw new Error(`Benchmarking failed on iteration ${iteration} after ${maxAttempts} attempts: ${lastError.message}`);
         }
       }
