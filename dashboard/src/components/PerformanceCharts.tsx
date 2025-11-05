@@ -173,6 +173,12 @@ export const PerformanceCharts: React.FC<Props> = ({ data }) => {
                         {filters.selectedProducts.length}{' '}
                         {filters.selectedProducts.length === 1 ? 'product' : 'products'}
                       </span>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                        {metricData.length > 0 ? metricData[0].measurements.length : 0}{' '}
+                        {metricData.length > 0 && metricData[0].measurements.length === 1
+                          ? 'iteration'
+                          : 'iterations'}
+                      </span>
                     </div>
                   </div>
                   <p className="text-gray-600 text-sm leading-relaxed">{metricInfo.description}</p>

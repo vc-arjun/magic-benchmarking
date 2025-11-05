@@ -218,6 +218,9 @@ export const NetworkSummary: React.FC<Props> = ({ filteredData }) => {
         </div>
       </div>
 
+      {/* Section Divider */}
+      <div className="border-t border-gray-200 my-8"></div>
+
       {/* Request Count by Type */}
       <div className="mb-8">
         <h4 className="font-semibold text-gray-800 mb-4">Request Count by Type</h4>
@@ -236,6 +239,9 @@ export const NetworkSummary: React.FC<Props> = ({ filteredData }) => {
         </div>
       </div>
 
+      {/* Section Divider */}
+      <div className="border-t border-gray-200 my-8"></div>
+
       {/* Size by Type */}
       <div className="mb-8">
         <h4 className="font-semibold text-gray-800 mb-4">Average Size by Type</h4>
@@ -251,6 +257,9 @@ export const NetworkSummary: React.FC<Props> = ({ filteredData }) => {
             ))}
         </div>
       </div>
+
+      {/* Section Divider */}
+      <div className="border-t border-gray-200 my-8"></div>
 
       {/* Duration by Type */}
       <div className="mb-8">
@@ -270,146 +279,158 @@ export const NetworkSummary: React.FC<Props> = ({ filteredData }) => {
         </div>
       </div>
 
+      {/* Section Divider */}
+      <div className="border-t border-gray-200 my-8"></div>
+
       {/* Extreme Requests */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <div className="bg-green-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-green-800 mb-3">Fastest Request</h4>
-          <div className="text-sm space-y-1">
-            <div className="font-medium text-green-700">{formatDuration(fastestRequest.min)}</div>
-            <div className="text-green-600 break-all text-xs">{fastestRequest.url}</div>
-            <div className="text-green-500 text-xs">
-              {fastestRequest.method} • {fastestRequest.type.toUpperCase()}
+      <div className="mb-8">
+        <h4 className="font-semibold text-gray-800 mb-6">Extreme Requests</h4>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-green-50 p-4 rounded-lg">
+            <h5 className="font-semibold text-green-800 mb-3">Fastest Request</h5>
+            <div className="text-sm space-y-1">
+              <div className="font-medium text-green-700">{formatDuration(fastestRequest.min)}</div>
+              <div className="text-green-600 break-all text-xs">{fastestRequest.url}</div>
+              <div className="text-green-500 text-xs">
+                {fastestRequest.method} • {fastestRequest.type.toUpperCase()}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-red-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-red-800 mb-3">Slowest Request</h4>
-          <div className="text-sm space-y-1">
-            <div className="font-medium text-red-700">{formatDuration(slowestRequest.max)}</div>
-            <div className="text-red-600 break-all text-xs">{slowestRequest.url}</div>
-            <div className="text-red-500 text-xs">
-              {slowestRequest.method} • {slowestRequest.type.toUpperCase()}
+          <div className="bg-red-50 p-4 rounded-lg">
+            <h5 className="font-semibold text-red-800 mb-3">Slowest Request</h5>
+            <div className="text-sm space-y-1">
+              <div className="font-medium text-red-700">{formatDuration(slowestRequest.max)}</div>
+              <div className="text-red-600 break-all text-xs">{slowestRequest.url}</div>
+              <div className="text-red-500 text-xs">
+                {slowestRequest.method} • {slowestRequest.type.toUpperCase()}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-yellow-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-yellow-800 mb-3">Largest Request</h4>
-          <div className="text-sm space-y-1">
-            <div className="font-medium text-yellow-700">
-              {formatBytes(Math.max(...largestRequest.measurements.map((m) => m.size)))}
-            </div>
-            <div className="text-yellow-600 break-all text-xs">{largestRequest.url}</div>
-            <div className="text-yellow-500 text-xs">
-              {largestRequest.method} • {largestRequest.type.toUpperCase()}
+          <div className="bg-yellow-50 p-4 rounded-lg">
+            <h5 className="font-semibold text-yellow-800 mb-3">Largest Request</h5>
+            <div className="text-sm space-y-1">
+              <div className="font-medium text-yellow-700">
+                {formatBytes(Math.max(...largestRequest.measurements.map((m) => m.size)))}
+              </div>
+              <div className="text-yellow-600 break-all text-xs">{largestRequest.url}</div>
+              <div className="text-yellow-500 text-xs">
+                {largestRequest.method} • {largestRequest.type.toUpperCase()}
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <h4 className="font-semibold text-blue-800 mb-3">Smallest Request</h4>
-          <div className="text-sm space-y-1">
-            <div className="font-medium text-blue-700">
-              {formatBytes(Math.min(...smallestRequest.measurements.map((m) => m.size)))}
-            </div>
-            <div className="text-blue-600 break-all text-xs">{smallestRequest.url}</div>
-            <div className="text-blue-500 text-xs">
-              {smallestRequest.method} • {smallestRequest.type.toUpperCase()}
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h5 className="font-semibold text-blue-800 mb-3">Smallest Request</h5>
+            <div className="text-sm space-y-1">
+              <div className="font-medium text-blue-700">
+                {formatBytes(Math.min(...smallestRequest.measurements.map((m) => m.size)))}
+              </div>
+              <div className="text-blue-600 break-all text-xs">{smallestRequest.url}</div>
+              <div className="text-blue-500 text-xs">
+                {smallestRequest.method} • {smallestRequest.type.toUpperCase()}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
+      {/* Section Divider */}
+      <div className="border-t border-gray-200 my-8"></div>
+
       {/* Top 3 Analysis by Type */}
-      <div className="space-y-6">
-        {/* Top 3 Largest by Type */}
-        <div>
-          <h4 className="font-semibold text-gray-800 mb-4">Top 3 Largest Requests by Type</h4>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {Object.entries(top3Largest).map(([type, requests]) => (
-              <div key={type} className="bg-gray-50 p-4 rounded-lg">
-                <h5 className="font-medium text-gray-700 mb-3 uppercase text-sm">{type}</h5>
-                <div className="space-y-2">
-                  {requests.map((req, index) => (
-                    <div key={`${req.url}-${index}`} className="text-xs">
-                      <div className="font-medium text-gray-800">
-                        #{index + 1}:{' '}
-                        {formatBytes(Math.max(...req.measurements.map((m) => m.size)))}
+      <div className="mb-8">
+        <h4 className="font-semibold text-gray-800 mb-6">Top 3 Analysis by Type</h4>
+        <div className="space-y-8">
+          {/* Top 3 Largest by Type */}
+          <div>
+            <h5 className="font-medium text-gray-700 mb-4">Top 3 Largest Requests by Type</h5>
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+              {Object.entries(top3Largest).map(([type, requests]) => (
+                <div key={type} className="bg-gray-50 p-4 rounded-lg">
+                  <h6 className="font-medium text-gray-700 mb-3 uppercase text-sm">{type}</h6>
+                  <div className="space-y-2">
+                    {requests.map((req, index) => (
+                      <div key={`${req.url}-${index}`} className="text-xs">
+                        <div className="font-medium text-gray-800">
+                          #{index + 1}:{' '}
+                          {formatBytes(Math.max(...req.measurements.map((m) => m.size)))}
+                        </div>
+                        <div className="text-gray-600 break-all">{req.url}</div>
                       </div>
-                      <div className="text-gray-600 break-all">{req.url}</div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Top 3 Smallest by Type */}
-        <div>
-          <h4 className="font-semibold text-gray-800 mb-4">Top 3 Smallest Requests by Type</h4>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {Object.entries(top3Smallest).map(([type, requests]) => (
-              <div key={type} className="bg-gray-50 p-4 rounded-lg">
-                <h5 className="font-medium text-gray-700 mb-3 uppercase text-sm">{type}</h5>
-                <div className="space-y-2">
-                  {requests.map((req, index) => (
-                    <div key={`${req.url}-${index}`} className="text-xs">
-                      <div className="font-medium text-gray-800">
-                        #{index + 1}:{' '}
-                        {formatBytes(Math.min(...req.measurements.map((m) => m.size)))}
+          {/* Top 3 Smallest by Type */}
+          <div>
+            <h5 className="font-medium text-gray-700 mb-4">Top 3 Smallest Requests by Type</h5>
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+              {Object.entries(top3Smallest).map(([type, requests]) => (
+                <div key={type} className="bg-gray-50 p-4 rounded-lg">
+                  <h6 className="font-medium text-gray-700 mb-3 uppercase text-sm">{type}</h6>
+                  <div className="space-y-2">
+                    {requests.map((req, index) => (
+                      <div key={`${req.url}-${index}`} className="text-xs">
+                        <div className="font-medium text-gray-800">
+                          #{index + 1}:{' '}
+                          {formatBytes(Math.min(...req.measurements.map((m) => m.size)))}
+                        </div>
+                        <div className="text-gray-600 break-all">{req.url}</div>
                       </div>
-                      <div className="text-gray-600 break-all">{req.url}</div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Top 3 Fastest by Type */}
-        <div>
-          <h4 className="font-semibold text-gray-800 mb-4">Top 3 Fastest Requests by Type</h4>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {Object.entries(top3Fastest).map(([type, requests]) => (
-              <div key={type} className="bg-gray-50 p-4 rounded-lg">
-                <h5 className="font-medium text-gray-700 mb-3 uppercase text-sm">{type}</h5>
-                <div className="space-y-2">
-                  {requests.map((req, index) => (
-                    <div key={`${req.url}-${index}`} className="text-xs">
-                      <div className="font-medium text-gray-800">
-                        #{index + 1}: {formatDuration(req.min)}
+          {/* Top 3 Fastest by Type */}
+          <div>
+            <h5 className="font-medium text-gray-700 mb-4">Top 3 Fastest Requests by Type</h5>
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+              {Object.entries(top3Fastest).map(([type, requests]) => (
+                <div key={type} className="bg-gray-50 p-4 rounded-lg">
+                  <h6 className="font-medium text-gray-700 mb-3 uppercase text-sm">{type}</h6>
+                  <div className="space-y-2">
+                    {requests.map((req, index) => (
+                      <div key={`${req.url}-${index}`} className="text-xs">
+                        <div className="font-medium text-gray-800">
+                          #{index + 1}: {formatDuration(req.min)}
+                        </div>
+                        <div className="text-gray-600 break-all">{req.url}</div>
                       </div>
-                      <div className="text-gray-600 break-all">{req.url}</div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Top 3 Slowest by Type */}
-        <div>
-          <h4 className="font-semibold text-gray-800 mb-4">Top 3 Slowest Requests by Type</h4>
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-            {Object.entries(top3Slowest).map(([type, requests]) => (
-              <div key={type} className="bg-gray-50 p-4 rounded-lg">
-                <h5 className="font-medium text-gray-700 mb-3 uppercase text-sm">{type}</h5>
-                <div className="space-y-2">
-                  {requests.map((req, index) => (
-                    <div key={`${req.url}-${index}`} className="text-xs">
-                      <div className="font-medium text-gray-800">
-                        #{index + 1}: {formatDuration(req.max)}
+          {/* Top 3 Slowest by Type */}
+          <div>
+            <h5 className="font-medium text-gray-700 mb-4">Top 3 Slowest Requests by Type</h5>
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+              {Object.entries(top3Slowest).map(([type, requests]) => (
+                <div key={type} className="bg-gray-50 p-4 rounded-lg">
+                  <h6 className="font-medium text-gray-700 mb-3 uppercase text-sm">{type}</h6>
+                  <div className="space-y-2">
+                    {requests.map((req, index) => (
+                      <div key={`${req.url}-${index}`} className="text-xs">
+                        <div className="font-medium text-gray-800">
+                          #{index + 1}: {formatDuration(req.max)}
+                        </div>
+                        <div className="text-gray-600 break-all">{req.url}</div>
                       </div>
-                      <div className="text-gray-600 break-all">{req.url}</div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
