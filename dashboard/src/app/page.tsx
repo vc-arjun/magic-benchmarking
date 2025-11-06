@@ -57,7 +57,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen">
       {/* Header Section */}
-      <div className="relative z-10 text-center py-16 px-6">
+      <div className="relative z-20 text-center py-16 px-6">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-center justify-center space-x-6 mb-6">
             <div className="p-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg">
@@ -79,7 +79,7 @@ const Dashboard = () => {
             </button>
 
             {reports.length > 0 && (
-              <div className="relative" ref={dropdownRef}>
+              <div className="relative z-20" ref={dropdownRef}>
                 <button
                   onClick={() => setDownloadDropdownOpen(!downloadDropdownOpen)}
                   className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 flex items-center gap-2"
@@ -89,7 +89,7 @@ const Dashboard = () => {
                 </button>
 
                 {downloadDropdownOpen && (
-                  <div className="absolute top-full mt-2 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-2 min-w-[160px] z-10">
+                  <div className="absolute top-full mt-2 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-2 min-w-[160px] z-50">
                     <button
                       onClick={() => {
                         downloadAllReportsAsJSON(reports);

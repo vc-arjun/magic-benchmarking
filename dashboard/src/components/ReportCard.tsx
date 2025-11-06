@@ -1,6 +1,6 @@
 import { ReportFile } from '@/types/reports';
-import { timeToReadable, downloadReportAsJSON, downloadReportAsCSV } from '@/utils';
-import { BarChart3, Globe, Download, FileText, FileSpreadsheet } from 'lucide-react';
+import { timeToReadable } from '@/utils';
+import { BarChart3, Globe, FileText, FileSpreadsheet } from 'lucide-react';
 import Link from 'next/link';
 import React, { useState, useEffect, useRef } from 'react';
 
@@ -54,36 +54,6 @@ export const ReportCard: React.FC<Props> = ({ report }) => {
           {timeToReadable(report.content.timestamp)}
         </p>
       </Link>
-
-      {/* Download Button */}
-      <div className="absolute top-4 right-4" ref={dropdownRef}>
-        <button
-          onClick={handleDownloadButtonClick}
-          className="opacity-0 group-hover:opacity-100 transition-opacity bg-green-500 text-white p-2 rounded-lg hover:bg-green-600"
-          title="Download report"
-        >
-          <Download className="w-4 h-4" />
-        </button>
-
-        {downloadDropdownOpen && (
-          <div className="absolute top-full mt-2 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-2 min-w-[140px] z-20">
-            <button
-              onClick={(e) => handleDownloadClick(e, () => downloadReportAsJSON(report))}
-              className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700 text-sm"
-            >
-              <FileText className="w-3 h-3" />
-              <span>JSON</span>
-            </button>
-            <button
-              onClick={(e) => handleDownloadClick(e, () => downloadReportAsCSV(report))}
-              className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700 text-sm"
-            >
-              <FileSpreadsheet className="w-3 h-3" />
-              <span>CSV</span>
-            </button>
-          </div>
-        )}
-      </div>
     </div>
   );
 };
