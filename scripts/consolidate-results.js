@@ -13,7 +13,7 @@ function calculateStatistics(measurements) {
     return { min: 0, max: 0, mean: 0, count: 0 };
   }
 
-  const values = measurements.map(m => m.value);
+  const values = measurements.map((m) => m.value);
   const sum = values.reduce((acc, val) => acc + val, 0);
   const mean = sum / values.length;
 
@@ -27,13 +27,12 @@ function calculateStatistics(measurements) {
 
 function consolidatePerformanceResults(resultsDir) {
   console.log('🔄 Consolidating performance results...');
-  
+
   // Find all performance result files
   const files = fs.readdirSync(resultsDir);
-  const performanceFiles = files.filter(f => 
-    f.includes('performance-results-consolidated') && 
-    f.endsWith('.json') &&
-    !f.includes('final') // Avoid processing already consolidated files
+  const performanceFiles = files.filter(
+    (f) =>
+      f.includes('performance-results-consolidated') && f.endsWith('.json') && !f.includes('final') // Avoid processing already consolidated files
   );
 
   if (performanceFiles.length === 0) {
@@ -53,19 +52,19 @@ function consolidatePerformanceResults(resultsDir) {
     consolidation_info: {
       total_jobs: performanceFiles.length,
       job_files: performanceFiles,
-      consolidated_at: new Date().toISOString()
-    }
+      consolidated_at: new Date().toISOString(),
+    },
   };
 
-  // Track all measurements by context for proper statistics calculation
-  const measurementsByContext = new Map();
+  // Track all measurements by product and context for proper statistics calculation
+  const measurementsByProductAndContext = new Map();
 
   // Process each job result file
   performanceFiles.forEach((file, index) => {
     console.log(`📊 Processing job ${index + 1}/${performanceFiles.length}: ${file}`);
-    
+
     const data = JSON.parse(fs.readFileSync(path.join(resultsDir, file), 'utf8'));
-    
+
     // Copy metadata from first file
     if (!consolidated.execution_config) {
       consolidated.execution_config = data.execution_config;
@@ -74,25 +73,33 @@ function consolidatePerformanceResults(resultsDir) {
     }
 
     // Process each product
-    data.products.forEach(product => {
-      product.results.forEach(contextResult => {
+    data.products.forEach((product) => {
+      const productName = product.product;
+
+      if (!measurementsByProductAndContext.has(productName)) {
+        measurementsByProductAndContext.set(productName, new Map());
+      }
+
+      const productContexts = measurementsByProductAndContext.get(productName);
+
+      product.results.forEach((contextResult) => {
         const contextKey = JSON.stringify(contextResult.context);
-        
-        if (!measurementsByContext.has(contextKey)) {
-          measurementsByContext.set(contextKey, {
+
+        if (!productContexts.has(contextKey)) {
+          productContexts.set(contextKey, {
             context: contextResult.context,
-            metrics: new Map()
+            metrics: new Map(),
           });
         }
 
-        const contextData = measurementsByContext.get(contextKey);
+        const contextData = productContexts.get(contextKey);
 
         // Merge measurements for each metric
         Object.entries(contextResult.metrics).forEach(([metricName, metricData]) => {
           if (!contextData.metrics.has(metricName)) {
             contextData.metrics.set(metricName, []);
           }
-          
+
           // Add all measurements from this job
           contextData.metrics.get(metricName).push(...metricData.measurements);
         });
@@ -103,32 +110,30 @@ function consolidatePerformanceResults(resultsDir) {
   // Build final consolidated structure
   const productMap = new Map();
 
-  for (const [, contextData] of measurementsByContext) {
-    const productName = 'MagicCheckout'; // Assuming single product for now
-    
-    if (!productMap.has(productName)) {
-      productMap.set(productName, {
-        product: productName,
-        results: []
+  for (const [productName, productContexts] of measurementsByProductAndContext) {
+    productMap.set(productName, {
+      product: productName,
+      results: [],
+    });
+
+    for (const [, contextData] of productContexts) {
+      // Recalculate statistics with all measurements
+      const metrics = {};
+      for (const [metricName, measurements] of contextData.metrics) {
+        // Sort measurements by iteration for consistency
+        measurements.sort((a, b) => a.iteration - b.iteration);
+
+        metrics[metricName] = {
+          measurements: measurements,
+          statistics: calculateStatistics(measurements),
+        };
+      }
+
+      productMap.get(productName).results.push({
+        context: contextData.context,
+        metrics: metrics,
       });
     }
-
-    // Recalculate statistics with all measurements
-    const metrics = {};
-    for (const [metricName, measurements] of contextData.metrics) {
-      // Sort measurements by iteration for consistency
-      measurements.sort((a, b) => a.iteration - b.iteration);
-      
-      metrics[metricName] = {
-        measurements: measurements,
-        statistics: calculateStatistics(measurements)
-      };
-    }
-
-    productMap.get(productName).results.push({
-      context: contextData.context,
-      metrics: metrics
-    });
   }
 
   consolidated.products = Array.from(productMap.values());
@@ -140,23 +145,36 @@ function consolidatePerformanceResults(resultsDir) {
 
   // Save consolidated results
   fs.writeFileSync(finalPath, JSON.stringify(consolidated, null, 2));
-  
+
   console.log(`✅ Consolidated performance results saved: ${finalFilename}`);
-  console.log(`📈 Total measurements consolidated: ${Array.from(measurementsByContext.values()).reduce((total, ctx) => {
-    return total + Array.from(ctx.metrics.values()).reduce((sum, measurements) => sum + measurements.length, 0);
-  }, 0)}`);
+  console.log(
+    `🛍️ Products consolidated: ${consolidated.products.length} (${consolidated.products.map((p) => p.product).join(', ')})`
+  );
+  console.log(
+    `📈 Total measurements consolidated: ${consolidated.products.reduce((total, product) => {
+      return (
+        total +
+        product.results.reduce((productTotal, result) => {
+          return (
+            productTotal +
+            Object.values(result.metrics).reduce((metricTotal, metric) => {
+              return metricTotal + metric.measurements.length;
+            }, 0)
+          );
+        }, 0)
+      );
+    }, 0)}`
+  );
 
   return finalFilename;
 }
 
 function consolidateNetworkResults(resultsDir) {
   console.log('🔄 Consolidating network results...');
-  
+
   const files = fs.readdirSync(resultsDir);
-  const networkFiles = files.filter(f => 
-    f.includes('network-analysis') && 
-    f.endsWith('.json') &&
-    !f.includes('final')
+  const networkFiles = files.filter(
+    (f) => f.includes('network-analysis') && f.endsWith('.json') && !f.includes('final')
   );
 
   if (networkFiles.length === 0) {
@@ -169,19 +187,20 @@ function consolidateNetworkResults(resultsDir) {
   const networkConsolidated = {
     timestamp: new Date().toISOString(),
     monitoring_phase: 'popup_to_interactive',
-    description: 'Network request analysis for Razorpay requests during MagicCheckout widget loading',
+    description:
+      'Network request analysis for Razorpay requests during MagicCheckout widget loading',
     products: [],
     consolidation_info: {
       total_jobs: networkFiles.length,
       job_files: networkFiles,
-      consolidated_at: new Date().toISOString()
-    }
+      consolidated_at: new Date().toISOString(),
+    },
   };
 
   // Merge all network results
   networkFiles.forEach((file, index) => {
     console.log(`🌐 Processing network job ${index + 1}/${networkFiles.length}: ${file}`);
-    
+
     const data = JSON.parse(fs.readFileSync(path.join(resultsDir, file), 'utf8'));
     networkConsolidated.products.push(...data.products);
   });
@@ -191,7 +210,7 @@ function consolidateNetworkResults(resultsDir) {
   const finalPath = path.join(resultsDir, finalFilename);
 
   fs.writeFileSync(finalPath, JSON.stringify(networkConsolidated, null, 2));
-  
+
   console.log(`✅ Consolidated network results saved: ${finalFilename}`);
   console.log(`🌐 Total network products consolidated: ${networkConsolidated.products.length}`);
 
@@ -202,17 +221,17 @@ function generateCSVFromConsolidated(resultsDir, performanceFile) {
   if (!performanceFile) return null;
 
   console.log('📊 Generating consolidated CSV...');
-  
+
   const data = JSON.parse(fs.readFileSync(path.join(resultsDir, performanceFile), 'utf8'));
-  
+
   const rows = [];
-  
+
   // CSV Header
   const headers = [
     'Product',
     'Network',
     'CPU',
-    'User State', 
+    'User State',
     'Browser',
     'Metric Name',
     'Metric Description',
@@ -221,25 +240,25 @@ function generateCSVFromConsolidated(resultsDir, performanceFile) {
     'Min',
     'Max',
     'Mean',
-    'Count'
+    'Count',
   ];
   rows.push(headers.join(','));
 
   // Data rows
-  data.products.forEach(productResult => {
-    productResult.results.forEach(contextResult => {
+  data.products.forEach((productResult) => {
+    productResult.results.forEach((contextResult) => {
       const { context } = contextResult;
-      
+
       Object.entries(contextResult.metrics).forEach(([metricKey, metricData]) => {
         const metadata = data.metrics_metadata[metricKey];
         const { measurements, statistics } = metricData;
-        
+
         // Create iterations string with all values
         const iterationsValues = measurements
           .sort((a, b) => a.iteration - b.iteration)
-          .map(m => (Math.round(m.value * 100) / 100).toString())
+          .map((m) => (Math.round(m.value * 100) / 100).toString())
           .join('; ');
-        
+
         const row = [
           escapeCSV(productResult.product),
           escapeCSV(context.network),
@@ -253,7 +272,7 @@ function generateCSVFromConsolidated(resultsDir, performanceFile) {
           (Math.round(statistics.min * 100) / 100).toString(),
           (Math.round(statistics.max * 100) / 100).toString(),
           (Math.round(statistics.mean * 100) / 100).toString(),
-          statistics.count.toString()
+          statistics.count.toString(),
         ];
         rows.push(row.join(','));
       });
@@ -263,10 +282,10 @@ function generateCSVFromConsolidated(resultsDir, performanceFile) {
   const csvContent = rows.join('\n');
   const csvFilename = performanceFile.replace('.json', '.csv');
   const csvPath = path.join(resultsDir, csvFilename);
-  
+
   fs.writeFileSync(csvPath, csvContent);
   console.log(`✅ Consolidated CSV saved: ${csvFilename}`);
-  
+
   return csvFilename;
 }
 
@@ -281,7 +300,7 @@ function escapeCSV(value) {
 // Main execution
 function main() {
   const resultsDir = process.argv[2] || './temp-results';
-  
+
   if (!fs.existsSync(resultsDir)) {
     console.error(`❌ Results directory not found: ${resultsDir}`);
     process.exit(1);
@@ -293,34 +312,36 @@ function main() {
   try {
     // Consolidate performance results
     const performanceFile = consolidatePerformanceResults(resultsDir);
-    
+
     // Consolidate network results
     const networkFile = consolidateNetworkResults(resultsDir);
-    
+
     // Generate CSV from consolidated performance data
     const csvFile = generateCSVFromConsolidated(resultsDir, performanceFile);
-    
+
     console.log('='.repeat(60));
     console.log('🎉 Consolidation completed successfully!');
     console.log('📁 Generated files:');
     if (performanceFile) console.log(`   📊 Performance: ${performanceFile}`);
     if (networkFile) console.log(`   🌐 Network: ${networkFile}`);
     if (csvFile) console.log(`   📋 CSV: ${csvFile}`);
-    
+
     // Create summary for CI
     const summary = {
       success: true,
       files: {
         performance: performanceFile,
         network: networkFile,
-        csv: csvFile
+        csv: csvFile,
       },
-      consolidation_timestamp: new Date().toISOString()
+      consolidation_timestamp: new Date().toISOString(),
     };
-    
-    fs.writeFileSync(path.join(resultsDir, 'consolidation-summary.json'), JSON.stringify(summary, null, 2));
+
+    fs.writeFileSync(
+      path.join(resultsDir, 'consolidation-summary.json'),
+      JSON.stringify(summary, null, 2)
+    );
     console.log('📋 Consolidation summary saved');
-    
   } catch (error) {
     console.error('❌ Consolidation failed:', error);
     process.exit(1);
@@ -335,5 +356,5 @@ if (require.main === module) {
 module.exports = {
   consolidatePerformanceResults,
   consolidateNetworkResults,
-  generateCSVFromConsolidated
+  generateCSVFromConsolidated,
 };
