@@ -135,13 +135,25 @@ function buildConfigFromIndividualEnvVars(): Config {
   const cpuNoThrottling = process.env.BENCHMARK_CPU_NO_THROTTLING === 'true';
 
   const productMagicCheckout =
-    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === undefined
-      ? true
-      : process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === 'true';
+    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === undefined || 
+    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === '' ||
+    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === 'true';
   const productGokwik =
-    process.env.BENCHMARK_PRODUCT_GOKWIK === undefined
-      ? true
-      : process.env.BENCHMARK_PRODUCT_GOKWIK === 'true';
+    process.env.BENCHMARK_PRODUCT_GOKWIK === undefined || 
+    process.env.BENCHMARK_PRODUCT_GOKWIK === '' ||
+    process.env.BENCHMARK_PRODUCT_GOKWIK === 'true';
+
+  logger.info('Product configuration from environment variables', {
+    BENCHMARK_PRODUCT_MAGIC_CHECKOUT: process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT,
+    BENCHMARK_PRODUCT_GOKWIK: process.env.BENCHMARK_PRODUCT_GOKWIK,
+    productMagicCheckout,
+    productGokwik,
+  });
+
+  // Ensure at least one product is enabled
+  if (!productMagicCheckout && !productGokwik) {
+    logger.warn('No products enabled, this should not happen with default configuration');
+  }
 
   // Apply smart defaults: if no conditions are selected, enable no_throttling for both
   const finalNetworkNoThrottling = networkNoThrottling || (!networkSlow4g && !networkNoThrottling);

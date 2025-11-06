@@ -6,6 +6,13 @@ const main = async () => {
   console.log('Starting Performance Benchmarking');
   console.log('='.repeat(60));
 
+  // Log product configuration
+  console.log('\n📋 Product Configuration:');
+  for (const product of CONFIG.products) {
+    console.log(`  ${product.name}: ${product.enabled ? '✅ Enabled' : '❌ Disabled'}`);
+  }
+  console.log('');
+
   const resultsManager = new ResultsManager(CONFIG);
 
   for (const product of CONFIG.products) {
