@@ -9,7 +9,7 @@ function getDefaultConfig(): Config {
     products: [
       {
         name: 'MagicCheckout',
-        entry_url: 'https://razorpay.com/demopg3/',
+        entry_url: 'https://vsmani.com/',
         pom_file: 'magic-checkout',
         enabled: true,
       },
