@@ -62,7 +62,9 @@ class GokwikPOM implements POM {
 
       // Wait for the checkout popup/iframe to appear and mark popup appearance
       const checkoutFrame = this.page.locator('iframe[title="Checkout window"]').contentFrame();
-      await expect(checkoutFrame.locator('body')).toBeVisible();
+      await expect(checkoutFrame.locator('body')).toBeVisible({
+        timeout: 60000,
+      });
       await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.POPUP_APPEARS);
 
       // Start network monitoring from popup appearance

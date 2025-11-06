@@ -17,7 +17,7 @@ function getDefaultConfig(): Config {
         name: 'Gokwik',
         entry_url: 'https://neemans.com/collections/all-products',
         pom_file: 'gokwik',
-        enabled: true,
+        enabled: false,
       },
     ],
     execution_matrix: {

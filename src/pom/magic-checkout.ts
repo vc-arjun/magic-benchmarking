@@ -42,7 +42,9 @@ class MagicCheckoutPOM implements POM {
     try {
       console.log(`Triggering checkout for ${this.productConfig.name}`);
 
-      await this.page.locator('button[data-atc-text="ADD TO CART "]').first().click();
+      await this.page.locator('button[data-atc-text="ADD TO CART "]').first().click({
+        timeout: 60000,
+      });
       const buyNowButton = this.page.getByRole('button', { name: 'CHECK OUT' });
 
       // Ensure button is visible before starting measurement
@@ -58,7 +60,9 @@ class MagicCheckoutPOM implements POM {
 
       // Wait for the checkout popup/iframe to appear and mark popup appearance
       const checkoutFrame = this.page.locator('iframe').nth(2).contentFrame();
-      await expect(checkoutFrame.locator('body')).toBeVisible();
+      await expect(checkoutFrame.locator('body')).toBeVisible({
+        timeout: 60000,
+      });
       await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.POPUP_APPEARS);
 
       // Start network monitoring from popup appearance
