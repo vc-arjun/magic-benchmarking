@@ -42,7 +42,7 @@ function getDefaultConfig(): Config {
         },
         '4x_slowdown': {
           rate: 4,
-          enabled: true,
+          enabled: false,
         },
       },
       user_state: {

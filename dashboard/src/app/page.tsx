@@ -1,14 +1,40 @@
 'use client';
 
-import React from 'react';
-import { BarChart3, RefreshCw, Clock, Activity, Globe } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  BarChart3,
+  RefreshCw,
+  Clock,
+  Activity,
+  Globe,
+  Download,
+  FileText,
+  FileSpreadsheet,
+} from 'lucide-react';
 import { useReports } from './hooks/useReports';
 import { ReportCard } from '@/components/ReportCard';
 import { Loading } from '@/components/Loading';
 import { Error } from '@/components/Error';
+import { downloadAllReportsAsJSON, downloadAllReportsAsCSV } from '@/utils';
 
 const Dashboard = () => {
   const { reports, loading, error, refreshReports } = useReports();
+  const [downloadDropdownOpen, setDownloadDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDownloadDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Sort reports by timestamp (latest first) and then filter by type
   const sortedReports = [...reports].sort((a, b) => {
@@ -43,13 +69,52 @@ const Dashboard = () => {
               </h1>
             </div>
           </div>
-          <button
-            onClick={refreshReports}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 flex items-center gap-2 mx-auto"
-          >
-            <RefreshCw className="w-4 h-4" />
-            <span>Refresh Reports</span>
-          </button>
+          <div className="flex items-center gap-4 mx-auto">
+            <button
+              onClick={refreshReports}
+              className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              <span>Refresh Reports</span>
+            </button>
+
+            {reports.length > 0 && (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  onClick={() => setDownloadDropdownOpen(!downloadDropdownOpen)}
+                  className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 flex items-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Download All</span>
+                </button>
+
+                {downloadDropdownOpen && (
+                  <div className="absolute top-full mt-2 right-0 bg-white rounded-lg shadow-lg border border-gray-200 py-2 min-w-[160px] z-10">
+                    <button
+                      onClick={() => {
+                        downloadAllReportsAsJSON(reports);
+                        setDownloadDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                    >
+                      <FileText className="w-4 h-4" />
+                      <span>JSON Format</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        downloadAllReportsAsCSV(reports);
+                        setDownloadDropdownOpen(false);
+                      }}
+                      className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                    >
+                      <FileSpreadsheet className="w-4 h-4" />
+                      <span>CSV Format</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
