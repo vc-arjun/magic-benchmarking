@@ -42,10 +42,14 @@ class MagicCheckoutPOM implements POM {
     try {
       console.log(`Triggering checkout for ${this.productConfig.name}`);
 
-      await this.page.locator('button[data-atc-text="ADD TO CART "]').first().click({
+      // Get the iframe and button references
+      const experienceFrame = this.page
+        .locator('iframe[title="Experience Checkout"]')
+        .contentFrame();
+      await expect(experienceFrame.locator('body')).toBeVisible({
         timeout: 60000,
       });
-      const buyNowButton = this.page.getByRole('button', { name: 'CHECK OUT' });
+      const buyNowButton = experienceFrame.getByRole('button', { name: 'Buy Now' });
 
       // Ensure button is visible before starting measurement
       await expect(buyNowButton).toBeVisible({
@@ -59,10 +63,8 @@ class MagicCheckoutPOM implements POM {
       await buyNowButton.click();
 
       // Wait for the checkout popup/iframe to appear and mark popup appearance
-      const checkoutFrame = this.page.locator('iframe').nth(2).contentFrame();
-      await expect(checkoutFrame.locator('body')).toBeVisible({
-        timeout: 60000,
-      });
+      const checkoutFrame = experienceFrame.locator('iframe[title="checkout"]').contentFrame();
+      await expect(checkoutFrame.locator('body')).toBeVisible();
       await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.POPUP_APPEARS);
 
       // Start network monitoring from popup appearance
@@ -72,7 +74,7 @@ class MagicCheckoutPOM implements POM {
       }
 
       // Wait for the contact number input to be visible and mark content appearance
-      const contactNumberInput = checkoutFrame.getByTestId('email');
+      const contactNumberInput = checkoutFrame.getByTestId('contactNumber');
       await expect(contactNumberInput).toBeVisible();
       await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.CONTENT_APPEARS);
 
