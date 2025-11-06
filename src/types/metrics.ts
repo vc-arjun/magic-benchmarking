@@ -1,4 +1,4 @@
-import { ExecutionConfig, ExecutionMatrixConfig } from './config';
+import { ExecutionConfig, ExecutionMatrixConfig, ProductConfig } from './config';
 
 export type InitialLoadMetrics =
   | 'click_to_content'
@@ -52,6 +52,7 @@ export type BenchmarkResults = {
   timestamp: string;
   execution_config: ExecutionConfig;
   execution_matrix: ExecutionMatrixConfig;
+  products_config: ProductConfig[];
   metrics_metadata: Record<InitialLoadMetrics, MetricMetadata>;
   products: ProductResults[];
 };

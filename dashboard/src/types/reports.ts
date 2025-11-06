@@ -7,7 +7,6 @@ import type {
   MetricMetadata,
   ContextResults,
   ProductResults,
-  BenchmarkResults,
 } from '../../../src/types/metrics';
 
 import type {
@@ -34,7 +33,7 @@ import type {
   Config,
 } from '../../../src/types/config';
 
-// Re-export all imported types
+// Re-export all imported types with modifications for dashboard compatibility
 export type {
   InitialLoadMetrics,
   ExecutionContext,
@@ -43,7 +42,6 @@ export type {
   MetricMetadata,
   ContextResults,
   ProductResults,
-  BenchmarkResults,
   NetworkRequestType,
   NetworkRequest,
   RequestStatistics,
@@ -64,7 +62,15 @@ export type {
   Config,
 };
 
-// Dashboard-specific types
+// Dashboard-specific types with backward compatibility
+export type BenchmarkResults = {
+  timestamp: string;
+  execution_config: ExecutionConfig;
+  execution_matrix: ExecutionMatrixConfig;
+  products_config?: ProductConfig[]; // Optional for backward compatibility
+  metrics_metadata: Record<InitialLoadMetrics, MetricMetadata>;
+  products: ProductResults[];
+};
 export interface NetworkAnalysisReport {
   timestamp: string;
   monitoring_phase: string;

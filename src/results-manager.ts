@@ -122,6 +122,7 @@ export class ResultsManager {
         viewport: this.config.execution.viewport,
       },
       execution_matrix: this.config.execution_matrix,
+      products_config: this.config.products,
       metrics_metadata: metricsMetadata,
       products: this.productResults,
     };

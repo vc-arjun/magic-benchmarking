@@ -4,6 +4,7 @@ import { FilterControls } from './performance-charts/FilterControls';
 import { PerformanceLineChart } from './performance-charts/PerformanceLineChart';
 import { PerformanceBarChart } from './performance-charts/PerformanceBarChart';
 import { PerformanceSummary } from './performance-charts/PerformanceSummary';
+import { TestMethodology } from './TestMethodology';
 import { ChartDataPoint, FilterState } from './performance-charts/types';
 import { transformChartData } from './performance-charts/utils';
 
@@ -150,6 +151,9 @@ export const PerformanceCharts: React.FC<Props> = ({ data }) => {
       />
 
       <div className="flex flex-col w-full gap-4 overflow-y-auto p-4 h-[calc(100vh-5.5rem)]">
+        {/* Test Methodology */}
+        <TestMethodology data={data} />
+
         {/* Charts */}
         <div className="space-y-8">
           {filters.selectedMetrics.map((metricKey) => {
