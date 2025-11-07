@@ -11,48 +11,23 @@ on:
       max_iterations_per_job:
         description: 'Maximum iterations per parallel job (splits total across multiple jobs)'
         required: false
-        default: '10'
+        default: '20'
         type: string
-      network_slow_4g:
-        description: 'Enable Slow 4G network throttling'
+      network_conditions:
+        description: 'Network conditions to test (comma-separated: slow_4g,fast_4g,no_throttling)'
         required: false
-        default: false
-        type: boolean
-      network_fast_4g:
-        description: 'Enable Fast 4G network throttling'
+        default: 'no_throttling,slow_4g,fast_4g'
+        type: string
+      cpu_conditions:
+        description: 'CPU conditions to test (comma-separated: 2x_slowdown,4x_slowdown,no_throttling)'
         required: false
-        default: false
-        type: boolean
-      network_no_throttling:
-        description: 'Enable No throttling network condition'
+        default: 'no_throttling,2x_slowdown,4x_slowdown'
+        type: string
+      products:
+        description: 'Products to test (comma-separated: magic_checkout,gokwik)'
         required: false
-        default: true
-        type: boolean
-      cpu_2x_slowdown:
-        description: 'Enable 2x CPU slowdown'
-        required: false
-        default: true
-        type: boolean
-      cpu_4x_slowdown:
-        description: 'Enable 4x CPU slowdown'
-        required: false
-        default: false
-        type: boolean
-      cpu_no_throttling:
-        description: 'Enable No throttling CPU condition'
-        required: false
-        default: true
-        type: boolean
-      product_magic_checkout:
-          description: 'Enable Magic Checkout'
-          required: false
-          default: true
-          type: boolean
-      product_gokwik:
-          description: 'Enable Gokwik'
-          required: false
-          default: true
-          type: boolean
+        default: 'magic_checkout,gokwik'
+        type: string
       override_reports:
         description: 'Override existing reports instead of concatenating'
         required: false
@@ -84,31 +59,35 @@ jobs:
           iterations_per_combo=${{ github.event.inputs.iterations }}
           max_per_job=${{ github.event.inputs.max_iterations_per_job }}
           
-          # Count enabled products
-          products=0
-          if [ "${{ github.event.inputs.product_magic_checkout }}" = "true" ]; then products=$((products + 1)); fi
-          if [ "${{ github.event.inputs.product_gokwik }}" = "true" ]; then products=$((products + 1)); fi
+          # Parse comma-separated products
+          IFS=',' read -ra PRODUCT_ARRAY <<< "${{ github.event.inputs.products }}"
+          products=${#PRODUCT_ARRAY[@]}
           
-          # Ensure at least one product is enabled
+          # Ensure at least one product is specified
           if [ $products -eq 0 ]; then
-            echo "❌ Error: At least one product must be enabled"
+            echo "❌ Error: At least one product must be specified"
             exit 1
           fi
           
-          # Count enabled network/CPU combinations
-          combinations=0
+          # Parse comma-separated network conditions
+          IFS=',' read -ra NETWORK_ARRAY <<< "${{ github.event.inputs.network_conditions }}"
+          network_conditions=${#NETWORK_ARRAY[@]}
           
-          # Count network conditions
-          network_conditions=0
-          if [ "${{ github.event.inputs.network_slow_4g }}" = "true" ]; then network_conditions=$((network_conditions + 1)); fi
-          if [ "${{ github.event.inputs.network_fast_4g }}" = "true" ]; then network_conditions=$((network_conditions + 1)); fi
-          if [ "${{ github.event.inputs.network_no_throttling }}" = "true" ]; then network_conditions=$((network_conditions + 1)); fi
+          # Ensure at least one network condition is specified
+          if [ $network_conditions -eq 0 ]; then
+            echo "❌ Error: At least one network condition must be specified"
+            exit 1
+          fi
           
-          # Count CPU conditions
-          cpu_conditions=0
-          if [ "${{ github.event.inputs.cpu_no_throttling }}" = "true" ]; then cpu_conditions=$((cpu_conditions + 1)); fi
-          if [ "${{ github.event.inputs.cpu_2x_slowdown }}" = "true" ]; then cpu_conditions=$((cpu_conditions + 1)); fi
-          if [ "${{ github.event.inputs.cpu_4x_slowdown }}" = "true" ]; then cpu_conditions=$((cpu_conditions + 1)); fi
+          # Parse comma-separated CPU conditions
+          IFS=',' read -ra CPU_ARRAY <<< "${{ github.event.inputs.cpu_conditions }}"
+          cpu_conditions=${#CPU_ARRAY[@]}
+          
+          # Ensure at least one CPU condition is specified
+          if [ $cpu_conditions -eq 0 ]; then
+            echo "❌ Error: At least one CPU condition must be specified"
+            exit 1
+          fi
           
           # Total combinations = network × CPU
           combinations=$((network_conditions * cpu_conditions))
@@ -211,14 +190,9 @@ jobs:
           BENCHMARK_ITERATIONS: ${{ matrix.iterations_per_combo }}
           BENCHMARK_JOB_ID: ${{ matrix.job_id }}
           BENCHMARK_TOTAL_JOBS: ${{ needs.calculate-matrix.outputs.total_jobs }}
-          BENCHMARK_NETWORK_SLOW_4G: ${{ github.event.inputs.network_slow_4g }}
-          BENCHMARK_NETWORK_FAST_4G: ${{ github.event.inputs.network_fast_4g }}
-          BENCHMARK_NETWORK_NO_THROTTLING: ${{ github.event.inputs.network_no_throttling }}
-          BENCHMARK_CPU_2X_SLOWDOWN: ${{ github.event.inputs.cpu_2x_slowdown }}
-          BENCHMARK_CPU_4X_SLOWDOWN: ${{ github.event.inputs.cpu_4x_slowdown }}
-          BENCHMARK_CPU_NO_THROTTLING: ${{ github.event.inputs.cpu_no_throttling }}
-          BENCHMARK_PRODUCT_MAGIC_CHECKOUT: ${{ github.event.inputs.product_magic_checkout }}
-          BENCHMARK_PRODUCT_GOKWIK: ${{ github.event.inputs.product_gokwik }}
+          BENCHMARK_NETWORK_CONDITIONS: ${{ github.event.inputs.network_conditions }}
+          BENCHMARK_CPU_CONDITIONS: ${{ github.event.inputs.cpu_conditions }}
+          BENCHMARK_PRODUCTS: ${{ github.event.inputs.products }}
           PLAYWRIGHT_HEADLESS: true
           SILENT_TESTS: true
           LOG_LEVEL: info
