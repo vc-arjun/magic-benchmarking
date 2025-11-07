@@ -23,15 +23,15 @@ function getDefaultConfig(): Config {
     execution_matrix: {
       network: {
         slow_4g: {
-          download_throughput: 500000, // 500kbps
-          upload_throughput: 500000, // 500kbps
-          latency: 400, // 400ms
+          download_throughput: 150000, // 150kbps - realistic poor 4G/3G conditions
+          upload_throughput: 75000, // 75kbps - typically asymmetric
+          latency: 600, // 600ms - higher latency for congested networks
           enabled: true,
         },
         fast_4g: {
-          download_throughput: 1000000, // 1Mbps
-          upload_throughput: 1000000, // 1Mbps
-          latency: 100, // 100ms
+          download_throughput: 1600000, // 1.6Mbps - realistic good 4G
+          upload_throughput: 750000, // 750kbps - realistic upload speeds
+          latency: 150, // 150ms - realistic mobile latency
           enabled: false,
         },
         no_throttling: {
@@ -43,7 +43,7 @@ function getDefaultConfig(): Config {
       },
       cpu: {
         no_throttling: {
-          rate: 1,
+          rate: 1, // High-end devices (flagship phones, desktops)
           enabled: true,
         },
         '2x_slowdown': {
@@ -68,12 +68,12 @@ function getDefaultConfig(): Config {
       headless: true,
       browsers: ['chromium'],
       viewport: {
-        width: 1366, // Standard laptop resolution width
-        height: 768, // Standard laptop resolution height
+        width: 375, // Mobile viewport width (iPhone X/11/12 standard)
+        height: 667, // Mobile viewport height
       },
       retry: {
         max_attempts: 3, // Total attempts (1 initial + 2 retries)
-        delay_between_retries: 3000, // 3 seconds delay between retries
+        delay_between_retries: 5000, // 5 seconds delay for slow networks
       },
     },
     output: {

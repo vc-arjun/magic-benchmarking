@@ -13,7 +13,8 @@ import {
   calculateStatistics,
   delay,
   generateIterationDelay,
-  exponentialBackoffRetry
+  exponentialBackoffRetry,
+  getRandomUserAgent
 } from './utils';
 
 export class TestExecutor {
@@ -65,18 +66,26 @@ export class TestExecutor {
     }
 
     if (!this.context) {
-      this.executorLogger.debug('Creating browser context');
+      this.executorLogger.debug('Creating browser context with mobile simulation');
       this.context = await this.browser.newContext({
         viewport: { 
           width: this.config.execution.viewport.width, 
           height: this.config.execution.viewport.height 
         },
+        // Use realistic mobile user agent
+        userAgent: getRandomUserAgent(),
+        // Mobile device characteristics
+        deviceScaleFactor: 2, // Retina/high-DPI display
+        isMobile: true,
+        hasTouch: true,
         // Grant all permissions to avoid popups
         permissions: ['camera', 'microphone', 'geolocation', 'notifications'],
         // Ignore HTTPS errors for local development
         ignoreHTTPSErrors: true,
         // Accept downloads automatically
         acceptDownloads: true,
+        // Reduce memory for realistic mobile constraints
+        javaScriptEnabled: true,
       });
     }
   }

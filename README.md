@@ -17,15 +17,33 @@ The framework supports testing under various conditions to simulate real-world s
 
 ### Network Conditions
 
-- **Slow 4G**: 500kbps download/upload, 400ms latency (simulates poor mobile connectivity)
-- **Fast 4G**: 1Mbps download/upload, 100ms latency (simulates good mobile connectivity)
+- **Slow 4G**: 150kbps download, 75kbps upload, 600ms latency (simulates poor mobile connectivity, congested networks)
+- **Fast 4G**: 1.6Mbps download, 750kbps upload, 150ms latency (simulates good mobile connectivity)
 - **No Throttling**: Full network speed (simulates desktop/WiFi connectivity)
 
 ### CPU Conditions
 
-- **No Throttling**: Full CPU performance (simulates high-end devices)
-- **2x Slowdown**: 50% CPU performance (simulates mid-range devices)
-- **4x Slowdown**: 25% CPU performance (simulates low-end devices)
+- **No Throttling**: Full CPU performance (simulates high-end devices - flagship phones, desktops)
+- **2x Slowdown**: 2x CPU throttling (simulates mid-range devices - 2-3 year old phones, budget laptops)
+- **4x Slowdown**: 4x CPU throttling (simulates low-end devices - budget phones, older devices)
+
+### Device Simulation
+
+The framework now includes realistic mobile device simulation:
+
+- **Mobile viewport**: 375x667 (iPhone standard)
+- **Mobile user agents**: Realistic Android and iOS user agents
+- **Touch interface**: Touch events enabled
+- **High-DPI display**: 2x device scale factor
+- **Extended timeouts**: 3-minute timeout for slow network conditions
+
+### Expected Performance
+
+With these realistic settings, you should expect:
+
+- **Slow 4G + Mid-range CPU**: TTI around 6-8 seconds (realistic for poor conditions)
+- **Fast 4G + High-end CPU**: TTI around 2-3 seconds (good mobile experience)
+- **No Throttling**: TTI under 2 seconds (desktop/WiFi experience)
 
 ### Products
 
@@ -43,14 +61,14 @@ The framework supports testing under various conditions to simulate real-world s
    - **max_iterations_per_job**: Maximum iterations per parallel job (e.g., 15)
 
    **Network Conditions:**
-   - **network_slow_4g**: Enable Slow 4G network throttling (500kbps, 400ms latency) (default: false)
-   - **network_fast_4g**: Enable Fast 4G network throttling (1Mbps, 100ms latency) (default: false)
+   - **network_slow_4g**: Enable Slow 4G network throttling (150kbps download, 600ms latency) (default: false)
+   - **network_fast_4g**: Enable Fast 4G network throttling (1.6Mbps download, 150ms latency) (default: false)
    - **network_no_throttling**: Enable no network throttling (default: true)
 
    **CPU Conditions:**
-   - **cpu_no_throttling**: Enable no CPU throttling (default: true)
-   - **cpu_2x_slowdown**: Enable 2x CPU slowdown (default: true)
-   - **cpu_4x_slowdown**: Enable 4x CPU slowdown (default: false)
+   - **cpu_no_throttling**: Enable no CPU throttling (high-end devices) (default: true)
+   - **cpu_2x_slowdown**: Enable 2x CPU slowdown (mid-range devices) (default: true)
+   - **cpu_4x_slowdown**: Enable 4x CPU slowdown (low-end devices) (default: false)
 
    **Products:**
    - **product_magic_checkout**: Enable Magic Checkout testing (default: true)
