@@ -18,7 +18,7 @@ The framework supports testing under various conditions to simulate real-world s
 ### Network Conditions
 
 - **Slow 4G**: 150kbps download, 75kbps upload, 600ms latency (simulates poor mobile connectivity, congested networks)
-- **Fast 4G**: 1.6Mbps download, 750kbps upload, 150ms latency (simulates good mobile connectivity)
+- **Fast 4G**: 1.5Mbps download, 750kbps upload, 150ms latency (simulates good mobile connectivity)
 - **No Throttling**: Full network speed (simulates desktop/WiFi connectivity)
 
 ### CPU Conditions
@@ -35,7 +35,7 @@ The framework now includes realistic mobile device simulation:
 - **Mobile user agents**: Realistic Android and iOS user agents
 - **Touch interface**: Touch events enabled
 - **High-DPI display**: 2x device scale factor
-- **Extended timeouts**: 3-minute timeout for slow network conditions
+- **Extended timeouts**: 2-minute timeout for slow network conditions
 
 ### Expected Performance
 

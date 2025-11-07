@@ -134,16 +134,7 @@ export class NetworkConfigValidator extends BaseValidator<NetworkConfig> {
       return this.createResult(false, undefined, ['Network config must be an object']);
     }
 
-    const { download_throughput, upload_throughput, latency, enabled } = input;
-
-    // Validate throughput values
-    if (!this.isNonNegativeNumber(download_throughput)) {
-      errors.push('Download throughput must be a non-negative number');
-    }
-
-    if (!this.isNonNegativeNumber(upload_throughput)) {
-      errors.push('Upload throughput must be a non-negative number');
-    }
+    const { latency, enabled } = input;
 
     // Validate latency
     if (!this.isNonNegativeNumber(latency)) {

@@ -17,27 +17,30 @@ function getDefaultConfig(): Config {
         name: 'Gokwik',
         entry_url: 'https://neemans.com/collections/all-products',
         pom_file: 'gokwik',
-        enabled: false,
+        enabled: true,
       },
     ],
     execution_matrix: {
       network: {
         slow_4g: {
-          download_throughput: 150000, // 150kbps - realistic poor 4G/3G conditions
-          upload_throughput: 75000, // 75kbps - typically asymmetric
-          latency: 600, // 600ms - higher latency for congested networks
+          download_throughput: 100000, // 100kbps
+          upload_throughput: 75000, // 75kbps
+          latency: 900, // 900ms
+          connection_type: 'cellular3g',
           enabled: true,
         },
         fast_4g: {
-          download_throughput: 1600000, // 1.6Mbps - realistic good 4G
-          upload_throughput: 750000, // 750kbps - realistic upload speeds
-          latency: 150, // 150ms - realistic mobile latency
-          enabled: false,
+          download_throughput: 1500000, // 1.5Mbps
+          upload_throughput: 750000, // 750kbps
+          latency: 150,
+          connection_type: 'cellular4g',
+          enabled: true,
         },
         no_throttling: {
-          download_throughput: 0, // 0Mbps
-          upload_throughput: 0, // 0Mbps
+          download_throughput: -1,
+          upload_throughput: -1,
           latency: 0,
+          connection_type: 'wifi',
           enabled: true,
         },
       },
@@ -47,12 +50,12 @@ function getDefaultConfig(): Config {
           enabled: true,
         },
         '2x_slowdown': {
-          rate: 2,
+          rate: 4,
           enabled: true,
         },
         '4x_slowdown': {
-          rate: 4,
-          enabled: false,
+          rate: 6,
+          enabled: true,
         },
       },
       user_state: {
@@ -63,13 +66,13 @@ function getDefaultConfig(): Config {
       },
     },
     execution: {
-      iterations: 10,
+      iterations: 2,
       timeout: 120000, // 2 minutes for slow network conditions
-      headless: true,
+      headless: false,
       browsers: ['chromium'],
       viewport: {
-        width: 375, // Mobile viewport width (iPhone X/11/12 standard)
-        height: 667, // Mobile viewport height
+        width: 390,
+        height: 844,
       },
       retry: {
         max_attempts: 3, // Total attempts (1 initial + 2 retries)
@@ -149,11 +152,11 @@ function buildConfigFromIndividualEnvVars(): Config {
   const cpuNoThrottling = process.env.BENCHMARK_CPU_NO_THROTTLING === 'true';
 
   const productMagicCheckout =
-    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === undefined || 
+    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === undefined ||
     process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === '' ||
     process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === 'true';
   const productGokwik =
-    process.env.BENCHMARK_PRODUCT_GOKWIK === undefined || 
+    process.env.BENCHMARK_PRODUCT_GOKWIK === undefined ||
     process.env.BENCHMARK_PRODUCT_GOKWIK === '' ||
     process.env.BENCHMARK_PRODUCT_GOKWIK === 'true';
 
@@ -170,8 +173,10 @@ function buildConfigFromIndividualEnvVars(): Config {
   }
 
   // Apply smart defaults: if no conditions are selected, enable no_throttling for both
-  const finalNetworkNoThrottling = networkNoThrottling || (!networkSlow4g && !networkFast4g && !networkNoThrottling);
-  const finalCpuNoThrottling = cpuNoThrottling || (!cpu2xSlowdown && !cpu4xSlowdown && !cpuNoThrottling);
+  const finalNetworkNoThrottling =
+    networkNoThrottling || (!networkSlow4g && !networkFast4g && !networkNoThrottling);
+  const finalCpuNoThrottling =
+    cpuNoThrottling || (!cpu2xSlowdown && !cpu4xSlowdown && !cpuNoThrottling);
 
   logger.info('Configuration built from individual environment variables', {
     iterations,

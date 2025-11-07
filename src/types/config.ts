@@ -1,3 +1,5 @@
+export type ConnectionType = 'cellular3g' | 'cellular4g' | 'wifi';
+
 export type ProductConfig = {
   name: string;
   entry_url: string;
@@ -10,6 +12,7 @@ export type NetworkConfig = {
   upload_throughput: number;
   latency: number;
   enabled: boolean;
+  connection_type: ConnectionType;
 };
 
 export type CPUConfig = {

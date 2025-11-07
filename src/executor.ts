@@ -119,6 +119,7 @@ export class TestExecutor {
           downloadThroughput: networkConfig.download_throughput,
           uploadThroughput: networkConfig.upload_throughput,
           latency: networkConfig.latency,
+          connectionType: networkConfig.connection_type 
         });
         this.executorLogger.debug('Applied network throttling', { 
           downloadThroughput: networkConfig.download_throughput,
