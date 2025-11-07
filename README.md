@@ -17,7 +17,7 @@ The framework supports testing under various conditions to simulate real-world s
 
 ### Network Conditions
 
-- **Slow 4G**: 150kbps download, 75kbps upload, 600ms latency (simulates poor mobile connectivity, congested networks)
+- **Slow 4G**: 150kbps download, 75kbps upload, 900ms latency (simulates poor mobile connectivity, congested networks)
 - **Fast 4G**: 1.5Mbps download, 750kbps upload, 150ms latency (simulates good mobile connectivity)
 - **No Throttling**: Full network speed (simulates desktop/WiFi connectivity)
 

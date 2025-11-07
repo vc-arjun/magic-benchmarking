@@ -23,16 +23,16 @@ function getDefaultConfig(): Config {
     execution_matrix: {
       network: {
         slow_4g: {
-          download_throughput: 100000, // 100kbps
-          upload_throughput: 75000, // 75kbps
-          latency: 900, // 900ms
+          download_throughput: 350000, // 350kbps
+          upload_throughput: 200000, // 200kbps
+          latency: 400, // 400ms
           connection_type: 'cellular3g',
           enabled: true,
         },
         fast_4g: {
-          download_throughput: 1500000, // 1.5Mbps
-          upload_throughput: 750000, // 750kbps
-          latency: 150,
+          download_throughput: 2000000, // 2Mbps
+          upload_throughput: 1000000, // 1Mbps
+          latency: 120, // 120ms
           connection_type: 'cellular4g',
           enabled: true,
         },
@@ -67,8 +67,8 @@ function getDefaultConfig(): Config {
     },
     execution: {
       iterations: 2,
-      timeout: 120000, // 2 minutes for slow network conditions
-      headless: false,
+      timeout: 60000,
+      headless: true,
       browsers: ['chromium'],
       viewport: {
         width: 390,

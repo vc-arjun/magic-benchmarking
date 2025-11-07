@@ -27,6 +27,7 @@ export class TestExecutor {
   private browser: Browser | null = null;
   private context: BrowserContext | null = null;
   private currentCdpSession: CDPSession | null = null;
+  private currentCombination: {network: string, cpu: string, user_state: string} | null = null;
 
   constructor(product: ProductConfig) {
     this.product = product;
@@ -91,53 +92,73 @@ export class TestExecutor {
   }
 
   /**
-   * Initialize CDP session for an execution context (network + CPU combination)
+   * Initialize execution context - throttling will be applied per page
    */
   private async initializeExecutionContext(combination: {network: string, cpu: string, user_state: string}): Promise<void> {
     if (!this.context) {
       throw new Error('Browser context not initialized');
     }
 
-    // Clean up any existing CDP session
-    await this.cleanupCdpSession();
-
     const networkConfig = this.config.execution_matrix.network[combination.network];
     const cpuConfig = this.config.execution_matrix.cpu[combination.cpu];
     
-    // Only create CDP session if throttling is needed
-    if (networkConfig.download_throughput > 0 || cpuConfig.rate > 1) {
-      this.executorLogger.debug('Creating CDP session for execution context', { combination });
-      
-      // Create a temporary page to establish CDP session
-      const tempPage = await this.context.newPage();
-      this.currentCdpSession = await this.context.newCDPSession(tempPage);
-      
-      // Apply network throttling if needed
-      if (networkConfig.download_throughput > 0) {
-        await this.currentCdpSession.send('Network.emulateNetworkConditions', {
-          offline: false,
-          downloadThroughput: networkConfig.download_throughput,
-          uploadThroughput: networkConfig.upload_throughput,
-          latency: networkConfig.latency,
-          connectionType: networkConfig.connection_type 
-        });
-        this.executorLogger.debug('Applied network throttling', { 
-          downloadThroughput: networkConfig.download_throughput,
-          uploadThroughput: networkConfig.upload_throughput,
-          latency: networkConfig.latency
-        });
+    this.executorLogger.info('🚀 Starting execution context', { 
+      combination,
+      networkSettings: {
+        condition: combination.network,
+        download: `${networkConfig.download_throughput / 1000}kbps`,
+        upload: `${networkConfig.upload_throughput / 1000}kbps`,
+        latency: `${networkConfig.latency}ms`,
+        connectionType: networkConfig.connection_type,
+        throttled: networkConfig.download_throughput > 0
+      },
+      cpuSettings: {
+        condition: combination.cpu,
+        rate: `${cpuConfig.rate}x slowdown`,
+        throttled: cpuConfig.rate > 1
       }
+    });
 
-      // Apply CPU throttling if needed
-      if (cpuConfig.rate > 1) {
-        await this.currentCdpSession.send('Emulation.setCPUThrottlingRate', {
-          rate: cpuConfig.rate,
-        });
-        this.executorLogger.debug('Applied CPU throttling', { rate: cpuConfig.rate });
-      }
-      
-      // Close the temporary page but keep the CDP session
-      await tempPage.close();
+    // Store current combination for use in page creation
+    this.currentCombination = combination;
+  }
+
+
+  /**
+   * Apply throttling to a page using CDP (simple, clean approach)
+   */
+  private async applyThrottlingToPage(page: Page, combination: {network: string, cpu: string, user_state: string}): Promise<void> {
+    const networkConfig = this.config.execution_matrix.network[combination.network];
+    const cpuConfig = this.config.execution_matrix.cpu[combination.cpu];
+
+    try {
+      // Create CDP session for this page only
+      const cdpSession = await page.context().newCDPSession(page);
+
+      // Apply network throttling (always, even if 0 for consistency)
+      await cdpSession.send('Network.emulateNetworkConditions', {
+        offline: false,
+        downloadThroughput: networkConfig.download_throughput,
+        uploadThroughput: networkConfig.upload_throughput,
+        latency: networkConfig.latency,
+        connectionType: networkConfig.connection_type
+      });
+
+      // Apply CPU throttling (always, even if 1 for consistency)
+      await cdpSession.send('Emulation.setCPUThrottlingRate', {
+        rate: cpuConfig.rate,
+      });
+
+      this.executorLogger.info('✅ Applied throttling to page', {
+        network: networkConfig.download_throughput > 0 ? `${networkConfig.download_throughput / 1000}kbps` : 'no throttling',
+        latency: `${networkConfig.latency}ms`,
+        cpu: cpuConfig.rate > 1 ? `${cpuConfig.rate}x slowdown` : 'no throttling'
+      });
+
+      // Don't store or cleanup this CDP session - let it live with the page
+    } catch (error) {
+      this.executorLogger.error('Failed to apply throttling to page', error instanceof Error ? error : new Error(String(error)));
+      throw error;
     }
   }
 
@@ -395,7 +416,7 @@ export class TestExecutor {
 
 
   /**
-   * Run a single iteration using the shared CDP session for the execution context
+   * Run a single iteration with per-page throttling application
    */
   private async runIteration(
     combination: {network: string, cpu: string, user_state: string}, 
@@ -410,8 +431,12 @@ export class TestExecutor {
 
     try {
       // Create new page from shared context
-      // The CDP session throttling is already applied at the context level
       page = await this.context.newPage();
+
+      // Apply throttling to this specific page using Playwright's built-in API
+      if (this.currentCombination) {
+        await this.applyThrottlingToPage(page, this.currentCombination);
+      }
 
       // Set up monitors
       this.performanceMonitor.setPage(page);

@@ -66,7 +66,9 @@ class MagicCheckoutPOM implements POM {
 
       // Wait for the checkout popup/iframe to appear and mark popup appearance
       const checkoutFrame = experienceFrame.locator('iframe[title="checkout"]').contentFrame();
-      await expect(checkoutFrame.locator('body')).toBeVisible();
+      await expect(checkoutFrame.locator('body')).toBeVisible({
+        timeout: 60000,
+      });
 
       await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.POPUP_APPEARS);
 
@@ -78,7 +80,9 @@ class MagicCheckoutPOM implements POM {
 
       // Wait for the contact number input to be visible and mark content appearance
       const contactNumberInput = checkoutFrame.getByTestId('contactNumber');
-      await expect(contactNumberInput).toBeVisible();
+      await expect(contactNumberInput).toBeVisible({
+        timeout: 60000,
+      });
 
       await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.CONTENT_APPEARS);
 

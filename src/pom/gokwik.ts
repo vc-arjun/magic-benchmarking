@@ -42,8 +42,12 @@ class GokwikPOM implements POM {
     try {
       console.log(`Triggering checkout for ${this.productConfig.name}`);
 
-      await this.page.getByRole('button', { name: 'Add to Cart' }).first().click();
-      await this.page.getByText('6', { exact: true }).first().click();
+      await this.page.getByRole('button', { name: 'Add to Cart' }).first().click({
+        timeout: 60000,
+      });
+      await this.page.getByText('6', { exact: true }).first().click({
+        timeout: 60000,
+      });
 
       await this.page.waitForTimeout(1000);
 
@@ -77,7 +81,9 @@ class GokwikPOM implements POM {
       const contactNumberInput = checkoutFrame.getByRole('textbox', {
         name: 'Enter Mobile Number',
       });
-      await expect(contactNumberInput).toBeVisible();
+      await expect(contactNumberInput).toBeVisible({
+        timeout: 60000,
+      });
       await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.CONTENT_APPEARS);
 
       // Wait for main thread to be idle and mark idle state at the correct timestamp
