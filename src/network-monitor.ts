@@ -159,9 +159,13 @@ export class NetworkMonitor {
     // Exclude specific patterns we don't want to track
     const excludePatterns = [
       /analytics\.google\.com/i,
-      /lumberjack\.razorpay\.com/i,
+      /lumberjack/i,
       /facebook\.com/i,
+      /facebook\.net/i,
       /\/magic\/analytics/i,
+      /ads\.linkedin\.com/i,
+      /criteo\.com/i,
+      /adroll\.com/i,
     ];
     
     // Check if URL matches any exclude pattern
