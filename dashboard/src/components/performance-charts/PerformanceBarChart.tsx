@@ -16,16 +16,28 @@ interface Props {
   data: GroupedDataPoint[];
   products: string[];
   contextLegend: ContextLegendItem[];
+  valueType?: 'mean' | 'min' | 'max';
 }
 
-export const PerformanceBarChart: React.FC<Props> = ({ data, products, contextLegend }) => {
+export const PerformanceBarChart: React.FC<Props> = ({
+  data,
+  products,
+  contextLegend,
+  valueType = 'mean',
+}) => {
   return (
     <div>
       <ResponsiveContainer width="100%" height={400}>
         <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="shortLabel" tick={{ fontSize: 12 }} interval={0} height={40} />
-          <YAxis label={{ value: 'Time (ms)', angle: -90, position: 'insideLeft' }} />
+          <YAxis
+            label={{
+              value: `${valueType.charAt(0).toUpperCase() + valueType.slice(1)} Time (ms)`,
+              angle: -90,
+              position: 'insideLeft',
+            }}
+          />
           <Tooltip
             formatter={(value: string, name: string) => [
               `${parseFloat(value).toFixed(2)} ms`,

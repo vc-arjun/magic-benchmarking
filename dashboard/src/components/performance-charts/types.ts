@@ -19,6 +19,7 @@ export interface FilterState {
   selectedCpus: string[];
   selectedUserStates: string[];
   chartType: 'bar' | 'line';
+  valueType: 'mean' | 'min' | 'max';
 }
 
 export interface ContextLegendItem {

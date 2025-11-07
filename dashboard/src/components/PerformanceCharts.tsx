@@ -5,6 +5,7 @@ import { PerformanceLineChart } from './performance-charts/PerformanceLineChart'
 import { PerformanceBarChart } from './performance-charts/PerformanceBarChart';
 import { PerformanceSummary } from './performance-charts/PerformanceSummary';
 import { TestMethodology } from './TestMethodology';
+import { MultiSelectDropdown } from './MultiSelectDropdown';
 import { ChartDataPoint, FilterState } from './performance-charts/types';
 import { transformChartData } from './performance-charts/utils';
 
@@ -20,6 +21,7 @@ export const PerformanceCharts: React.FC<Props> = ({ data }) => {
     selectedCpus: Object.keys(data.execution_matrix.cpu),
     selectedUserStates: Object.keys(data.execution_matrix.user_state),
     chartType: 'line',
+    valueType: 'mean',
   });
 
   // Transform data for visualization
@@ -115,7 +117,7 @@ export const PerformanceCharts: React.FC<Props> = ({ data }) => {
       );
     }
 
-    const { groupedData, contextLegend } = transformChartData(metricData, data);
+    const { groupedData, contextLegend } = transformChartData(metricData, data, filters.valueType);
     const products = [...new Set(metricData.map((d) => d.product))];
 
     switch (filters.chartType) {
@@ -125,6 +127,7 @@ export const PerformanceCharts: React.FC<Props> = ({ data }) => {
             data={groupedData}
             products={products}
             contextLegend={contextLegend}
+            valueType={filters.valueType}
           />
         );
       case 'bar':
@@ -134,6 +137,7 @@ export const PerformanceCharts: React.FC<Props> = ({ data }) => {
             data={groupedData}
             products={products}
             contextLegend={contextLegend}
+            valueType={filters.valueType}
           />
         );
     }
@@ -170,6 +174,27 @@ export const PerformanceCharts: React.FC<Props> = ({ data }) => {
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-xl font-semibold text-gray-800">{metricInfo.name}</h3>
                     <div className="flex items-center space-x-2">
+                      {/* Value Type Dropdown */}
+                      <div className="w-32">
+                        <MultiSelectDropdown
+                          label=""
+                          options={[
+                            { value: 'mean', label: 'Mean Values' },
+                            { value: 'min', label: 'Min Values' },
+                            { value: 'max', label: 'Max Values' },
+                          ]}
+                          selectedValues={[filters.valueType]}
+                          onChange={(values) =>
+                            setFilters({
+                              ...filters,
+                              valueType: values[0] as 'mean' | 'min' | 'max',
+                            })
+                          }
+                          placeholder="Select value type..."
+                          multiSelect={false}
+                        />
+                      </div>
+
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {metricData.length} {metricData.length === 1 ? 'data point' : 'data points'}
                       </span>

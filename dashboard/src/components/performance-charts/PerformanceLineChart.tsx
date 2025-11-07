@@ -16,9 +16,15 @@ interface Props {
   data: GroupedDataPoint[];
   products: string[];
   contextLegend: ContextLegendItem[];
+  valueType?: 'mean' | 'min' | 'max';
 }
 
-export const PerformanceLineChart: React.FC<Props> = ({ data, products, contextLegend }) => {
+export const PerformanceLineChart: React.FC<Props> = ({
+  data,
+  products,
+  contextLegend,
+  valueType = 'mean',
+}) => {
   return (
     <div>
       <ResponsiveContainer width="100%" height={400}>
@@ -27,7 +33,7 @@ export const PerformanceLineChart: React.FC<Props> = ({ data, products, contextL
           <XAxis dataKey="shortLabel" tick={{ fontSize: 12 }} interval={0} height={40} />
           <YAxis
             label={{
-              value: 'Time (ms)',
+              value: `${valueType.charAt(0).toUpperCase() + valueType.slice(1)} Time (ms)`,
               angle: -90,
               position: 'insideLeft',
               fontSize: 12,

@@ -68,7 +68,8 @@ export const createContextLegend = (
 // Transform and group chart data
 export const transformChartData = (
   metricData: ChartDataPoint[],
-  data: BenchmarkResults
+  data: BenchmarkResults,
+  valueType: 'mean' | 'min' | 'max' = 'mean'
 ): { groupedData: GroupedDataPoint[]; contextLegend: ContextLegendItem[] } => {
   // Create context legend for this metric
   const contextLegend = createContextLegend(metricData, data);
@@ -76,8 +77,10 @@ export const transformChartData = (
   // Group data by context for better visualization
   const groupedData = metricData.reduce((acc, point) => {
     const existing = acc.find((item) => item.contextKey === point.contextKey);
+    const selectedValue = point[valueType]; // Use the selected value type
+
     if (existing) {
-      existing[point.product] = point.mean;
+      existing[point.product] = selectedValue;
       existing[`${point.product}_min`] = point.min;
       existing[`${point.product}_max`] = point.max;
       existing[`${point.product}_iterations`] = point.measurements;
@@ -91,7 +94,7 @@ export const transformChartData = (
         contextKey: point.contextKey,
         shortLabel: contextIndex.toString(),
         contextIndex: contextIndex,
-        [point.product]: point.mean,
+        [point.product]: selectedValue,
         [`${point.product}_min`]: point.min,
         [`${point.product}_max`]: point.max,
         [`${point.product}_iterations`]: point.measurements,
