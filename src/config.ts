@@ -87,63 +87,6 @@ function getDefaultConfig(): Config {
 }
 
 /**
- * Load configuration from environment variables or use default configuration
- */
-function loadConfigFromEnv(): Config {
-  // Check for legacy JSON config first
-  const configEnvVar = process.env.MAGIC_BENCHMARKING_CONFIG;
-
-  if (configEnvVar) {
-    try {
-      const parsedConfig = JSON.parse(configEnvVar) as Config;
-      logger.info('Configuration loaded from MAGIC_BENCHMARKING_CONFIG JSON', {
-        source: 'json_environment',
-        productsCount: parsedConfig.products?.length || 0,
-      });
-      return parsedConfig;
-    } catch (error) {
-      logger.warn(
-        'Failed to parse MAGIC_BENCHMARKING_CONFIG, falling back to individual env vars or defaults',
-        {
-          error: error instanceof Error ? error.message : String(error),
-        }
-      );
-    }
-  }
-
-  // Check for comma-separated environment variables (new format)
-  const hasCommaSeparatedEnvVars =
-    process.env.BENCHMARK_NETWORK_CONDITIONS ||
-    process.env.BENCHMARK_CPU_CONDITIONS ||
-    process.env.BENCHMARK_PRODUCTS;
-
-  if (hasCommaSeparatedEnvVars) {
-    logger.info('Building configuration from comma-separated environment variables');
-    return buildConfigFromCommaSeparatedEnvVars();
-  }
-
-  // Check for individual environment variables (legacy format)
-  const hasIndividualEnvVars =
-    process.env.BENCHMARK_ITERATIONS ||
-    process.env.BENCHMARK_NETWORK_SLOW_4G ||
-    process.env.BENCHMARK_NETWORK_FAST_4G ||
-    process.env.BENCHMARK_NETWORK_NO_THROTTLING ||
-    process.env.BENCHMARK_CPU_2X_SLOWDOWN ||
-    process.env.BENCHMARK_CPU_4X_SLOWDOWN ||
-    process.env.BENCHMARK_CPU_NO_THROTTLING ||
-    process.env.BENCHMARK_PRODUCT_GOKWIK ||
-    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT;
-
-  if (hasIndividualEnvVars) {
-    logger.info('Building configuration from individual environment variables (legacy)');
-    return buildConfigFromIndividualEnvVars();
-  }
-
-  logger.info('No configuration environment variables found, using default configuration');
-  return getDefaultConfig();
-}
-
-/**
  * Build configuration from comma-separated environment variables
  */
 function buildConfigFromCommaSeparatedEnvVars(): Config {
@@ -156,18 +99,18 @@ function buildConfigFromCommaSeparatedEnvVars(): Config {
 
   // Parse comma-separated network conditions
   const networkConditions = process.env.BENCHMARK_NETWORK_CONDITIONS
-    ? process.env.BENCHMARK_NETWORK_CONDITIONS.split(',').map(s => s.trim())
+    ? process.env.BENCHMARK_NETWORK_CONDITIONS.split(',').map((s) => s.trim())
     : ['no_throttling'];
 
   // Parse comma-separated CPU conditions
   const cpuConditions = process.env.BENCHMARK_CPU_CONDITIONS
-    ? process.env.BENCHMARK_CPU_CONDITIONS.split(',').map(s => s.trim())
+    ? process.env.BENCHMARK_CPU_CONDITIONS.split(',').map((s) => s.trim())
     : ['2x_slowdown', 'no_throttling'];
 
   // Parse comma-separated products
   const products = process.env.BENCHMARK_PRODUCTS
-    ? process.env.BENCHMARK_PRODUCTS.split(',').map(s => s.trim())
-    : ['magic_checkout', 'gokwik'];
+    ? process.env.BENCHMARK_PRODUCTS.split(',').map((s) => s.trim())
+    : ['MagicCheckout', 'Gokwik'];
 
   logger.info('Configuration built from comma-separated environment variables', {
     iterations,
@@ -178,9 +121,9 @@ function buildConfigFromCommaSeparatedEnvVars(): Config {
 
   // Build the configuration
   const config: Config = {
-    products: defaultConfig.products.map(product => ({
+    products: defaultConfig.products.map((product) => ({
       ...product,
-      enabled: products.includes(product.pom_file),
+      enabled: products.includes(product.name),
     })),
     execution_matrix: {
       network: {
@@ -224,121 +167,10 @@ function buildConfigFromCommaSeparatedEnvVars(): Config {
 }
 
 /**
- * Build configuration from individual environment variables (legacy)
- */
-function buildConfigFromIndividualEnvVars(): Config {
-  const defaultConfig = getDefaultConfig();
-
-  // Parse iterations
-  const iterations = process.env.BENCHMARK_ITERATIONS
-    ? parseInt(process.env.BENCHMARK_ITERATIONS, 10)
-    : defaultConfig.execution.iterations;
-
-  // Parse boolean environment variables (GitHub Actions passes 'true'/'false' as strings)
-  const networkSlow4g = process.env.BENCHMARK_NETWORK_SLOW_4G === 'true';
-  const networkFast4g = process.env.BENCHMARK_NETWORK_FAST_4G === 'true';
-  const networkNoThrottling = process.env.BENCHMARK_NETWORK_NO_THROTTLING === 'true';
-  const cpu2xSlowdown = process.env.BENCHMARK_CPU_2X_SLOWDOWN === 'true';
-  const cpu4xSlowdown = process.env.BENCHMARK_CPU_4X_SLOWDOWN === 'true';
-  const cpuNoThrottling = process.env.BENCHMARK_CPU_NO_THROTTLING === 'true';
-
-  const productMagicCheckout =
-    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === undefined ||
-    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === '' ||
-    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT === 'true';
-  const productGokwik =
-    process.env.BENCHMARK_PRODUCT_GOKWIK === undefined ||
-    process.env.BENCHMARK_PRODUCT_GOKWIK === '' ||
-    process.env.BENCHMARK_PRODUCT_GOKWIK === 'true';
-
-  logger.info('Product configuration from environment variables', {
-    BENCHMARK_PRODUCT_MAGIC_CHECKOUT: process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT,
-    BENCHMARK_PRODUCT_GOKWIK: process.env.BENCHMARK_PRODUCT_GOKWIK,
-    productMagicCheckout,
-    productGokwik,
-  });
-
-  // Ensure at least one product is enabled
-  if (!productMagicCheckout && !productGokwik) {
-    logger.warn('No products enabled, this should not happen with default configuration');
-  }
-
-  // Apply smart defaults: if no conditions are selected, enable no_throttling for both
-  const finalNetworkNoThrottling =
-    networkNoThrottling || (!networkSlow4g && !networkFast4g && !networkNoThrottling);
-  const finalCpuNoThrottling =
-    cpuNoThrottling || (!cpu2xSlowdown && !cpu4xSlowdown && !cpuNoThrottling);
-
-  logger.info('Configuration built from individual environment variables', {
-    iterations,
-    networkConditions: {
-      slow_4g: networkSlow4g,
-      fast_4g: networkFast4g,
-      no_throttling: finalNetworkNoThrottling,
-    },
-    cpuConditions: {
-      '2x_slowdown': cpu2xSlowdown,
-      '4x_slowdown': cpu4xSlowdown,
-      no_throttling: finalCpuNoThrottling,
-    },
-  });
-
-  return {
-    ...defaultConfig,
-    products: defaultConfig.products.map((p) => ({
-      ...p,
-      enabled:
-        p.name === 'MagicCheckout'
-          ? productMagicCheckout
-          : p.name === 'Gokwik'
-            ? productGokwik
-            : p.enabled,
-    })),
-    execution: {
-      ...defaultConfig.execution,
-      iterations,
-    },
-    execution_matrix: {
-      ...defaultConfig.execution_matrix,
-      network: {
-        ...defaultConfig.execution_matrix.network,
-        slow_4g: {
-          ...defaultConfig.execution_matrix.network.slow_4g,
-          enabled: networkSlow4g,
-        },
-        fast_4g: {
-          ...defaultConfig.execution_matrix.network.fast_4g,
-          enabled: networkFast4g,
-        },
-        no_throttling: {
-          ...defaultConfig.execution_matrix.network.no_throttling,
-          enabled: finalNetworkNoThrottling,
-        },
-      },
-      cpu: {
-        ...defaultConfig.execution_matrix.cpu,
-        no_throttling: {
-          ...defaultConfig.execution_matrix.cpu.no_throttling,
-          enabled: finalCpuNoThrottling,
-        },
-        '2x_slowdown': {
-          ...defaultConfig.execution_matrix.cpu['2x_slowdown'],
-          enabled: cpu2xSlowdown,
-        },
-        '4x_slowdown': {
-          ...defaultConfig.execution_matrix.cpu['4x_slowdown'],
-          enabled: cpu4xSlowdown,
-        },
-      },
-    },
-  };
-}
-
-/**
  * Load and validate configuration with comprehensive error handling
  */
 function loadConfig(): Config {
-  const rawConfig = loadConfigFromEnv();
+  const rawConfig = buildConfigFromCommaSeparatedEnvVars();
 
   try {
     // Validate configuration

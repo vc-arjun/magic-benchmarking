@@ -17,25 +17,24 @@ The framework supports testing under various conditions to simulate real-world s
 
 ### Network Conditions
 
-- **Slow 4G**: 150kbps download, 75kbps upload, 900ms latency (simulates poor mobile connectivity, congested networks)
-- **Fast 4G**: 1.5Mbps download, 750kbps upload, 150ms latency (simulates good mobile connectivity)
+- **Slow 4G**: 200kbps download, 100kbps upload, 500ms latency (simulates poor mobile connectivity, congested networks)
+- **Fast 4G**: 1.5Mbps download, 500kbps upload, 150ms latency (simulates good mobile connectivity)
 - **No Throttling**: Full network speed (simulates desktop/WiFi connectivity)
 
 ### CPU Conditions
 
-- **No Throttling**: Full CPU performance (simulates high-end devices - flagship phones, desktops)
-- **2x Slowdown**: 2x CPU throttling (simulates mid-range devices - 2-3 year old phones, budget laptops)
-- **4x Slowdown**: 4x CPU throttling (simulates low-end devices - budget phones, older devices)
+- **No Throttling**: 1x CPU rate (simulates high-end devices - flagship phones, desktops)
+- **2x Slowdown**: 4x CPU rate (simulates mid-range devices - 2-3 year old phones, budget laptops)
+- **4x Slowdown**: 6x CPU rate (simulates low-end devices - budget phones, older devices)
 
 ### Device Simulation
 
-The framework now includes realistic mobile device simulation:
+The framework includes realistic mobile device simulation:
 
-- **Mobile viewport**: 375x667 (iPhone standard)
-- **Mobile user agents**: Realistic Android and iOS user agents
+- **Mobile viewport**: 390x844 (iPhone standard)
 - **Touch interface**: Touch events enabled
-- **High-DPI display**: 2x device scale factor
-- **Extended timeouts**: 2-minute timeout for slow network conditions
+- **Extended timeouts**: 60-second timeout for all conditions
+- **Headless execution**: Optimized for CI/CD environments
 
 ### Expected Performance
 
@@ -58,26 +57,20 @@ With these realistic settings, you should expect:
 
 2. Click **"Run workflow"** and configure the inputs:
    - **iterations**: Iterations per combination (e.g., 20 iterations per network/CPU combo)
-   - **max_iterations_per_job**: Maximum iterations per parallel job (e.g., 15)
-
-   **Network Conditions:**
-   - **network_slow_4g**: Enable Slow 4G network throttling (150kbps download, 600ms latency) (default: false)
-   - **network_fast_4g**: Enable Fast 4G network throttling (1.6Mbps download, 150ms latency) (default: false)
-   - **network_no_throttling**: Enable no network throttling (default: true)
-
-   **CPU Conditions:**
-   - **cpu_no_throttling**: Enable no CPU throttling (high-end devices) (default: true)
-   - **cpu_2x_slowdown**: Enable 2x CPU slowdown (mid-range devices) (default: true)
-   - **cpu_4x_slowdown**: Enable 4x CPU slowdown (low-end devices) (default: false)
-
-   **Products:**
-   - **product_magic_checkout**: Enable Magic Checkout testing (default: true)
-   - **product_gokwik**: Enable Gokwik testing (default: true)
+   - **max_iterations_per_job**: Maximum iterations per parallel job (e.g., 20)
+   - **network_conditions**: Comma-separated network conditions (default: "no_throttling,slow_4g,fast_4g")
+     - Available options: `slow_4g`, `fast_4g`, `no_throttling`
+   - **cpu_conditions**: Comma-separated CPU conditions (default: "no_throttling,2x_slowdown,4x_slowdown")
+     - Available options: `no_throttling`, `2x_slowdown`, `4x_slowdown`
+   - **products**: Comma-separated products to test (default: "MagicCheckout,Gokwik")
+     - Available options: `MagicCheckout`, `Gokwik`
+   - **override_reports**: Override existing reports instead of concatenating (default: false)
+   - **skip_benchmarking**: Skip benchmarking and use existing results (default: false)
 
 3. The **parallel workflow** will:
    - **Calculate total iterations**: 20 iterations × network conditions × CPU conditions × products
-     - Example: 20 iterations × 1 network (no_throttling) × 2 CPU (no_throttling + 2x_slowdown) × 2 products = 80 total iterations
-   - **Split across parallel jobs**: 80 total iterations ÷ 15 max per job = 6 parallel jobs
+     - Example: 20 iterations × 3 networks (no_throttling,slow_4g,fast_4g) × 3 CPU (no_throttling,2x_slowdown,4x_slowdown) × 2 products = 360 total iterations
+   - **Split across parallel jobs**: 360 total iterations ÷ 20 max per job = 18 parallel jobs
    - **Execute jobs concurrently** to reduce total execution time
    - **Consolidate results** from all jobs into a single comprehensive report
    - **Deploy the dashboard** only if all jobs succeed
@@ -116,11 +109,40 @@ With these realistic settings, you should expect:
    npm run build
    ```
 
+### Environment Variables
+
+For local development, you can customize benchmark execution using environment variables:
+
+```bash
+# Number of iterations per combination per product
+export BENCHMARK_ITERATIONS=20
+
+# Network conditions to test (comma-separated)
+# Available: slow_4g, fast_4g, no_throttling
+export BENCHMARK_NETWORK_CONDITIONS="no_throttling,slow_4g,fast_4g"
+
+# CPU conditions to test (comma-separated)  
+# Available: no_throttling, 2x_slowdown, 4x_slowdown
+export BENCHMARK_CPU_CONDITIONS="no_throttling,2x_slowdown,4x_slowdown"
+
+# Products to test (comma-separated)
+# Available: MagicCheckout, Gokwik
+export BENCHMARK_PRODUCTS="MagicCheckout,Gokwik"
+
+# Playwright configuration
+export PLAYWRIGHT_HEADLESS=true
+export SILENT_TESTS=true
+export LOG_LEVEL=info
+```
+
 ### Basic Commands
 
 ```bash
 # Run benchmarks locally
 npm start
+
+# Run with custom configuration
+BENCHMARK_ITERATIONS=5 BENCHMARK_NETWORK_CONDITIONS="no_throttling" npm start
 
 # Development mode with live reload
 npm run dev

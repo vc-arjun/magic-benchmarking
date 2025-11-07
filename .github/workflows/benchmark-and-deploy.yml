@@ -24,9 +24,9 @@ on:
         default: 'no_throttling,2x_slowdown,4x_slowdown'
         type: string
       products:
-        description: 'Products to test (comma-separated: magic_checkout,gokwik)'
+        description: 'Products to test (comma-separated: MagicCheckout,Gokwik)'
         required: false
-        default: 'magic_checkout,gokwik'
+        default: 'MagicCheckout,Gokwik'
         type: string
       override_reports:
         description: 'Override existing reports instead of concatenating'
