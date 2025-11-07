@@ -18,8 +18,18 @@ on:
         required: false
         default: false
         type: boolean
+      network_fast_4g:
+        description: 'Enable Fast 4G network throttling'
+        required: false
+        default: false
+        type: boolean
       network_no_throttling:
         description: 'Enable No throttling network condition'
+        required: false
+        default: true
+        type: boolean
+      cpu_2x_slowdown:
+        description: 'Enable 2x CPU slowdown'
         required: false
         default: true
         type: boolean
@@ -87,14 +97,21 @@ jobs:
           
           # Count enabled network/CPU combinations
           combinations=0
-          if [ "${{ github.event.inputs.network_slow_4g }}" = "true" ]; then
-            if [ "${{ github.event.inputs.cpu_no_throttling }}" = "true" ]; then combinations=$((combinations + 1)); fi
-            if [ "${{ github.event.inputs.cpu_4x_slowdown }}" = "true" ]; then combinations=$((combinations + 1)); fi
-          fi
-          if [ "${{ github.event.inputs.network_no_throttling }}" = "true" ]; then
-            if [ "${{ github.event.inputs.cpu_no_throttling }}" = "true" ]; then combinations=$((combinations + 1)); fi
-            if [ "${{ github.event.inputs.cpu_4x_slowdown }}" = "true" ]; then combinations=$((combinations + 1)); fi
-          fi
+          
+          # Count network conditions
+          network_conditions=0
+          if [ "${{ github.event.inputs.network_slow_4g }}" = "true" ]; then network_conditions=$((network_conditions + 1)); fi
+          if [ "${{ github.event.inputs.network_fast_4g }}" = "true" ]; then network_conditions=$((network_conditions + 1)); fi
+          if [ "${{ github.event.inputs.network_no_throttling }}" = "true" ]; then network_conditions=$((network_conditions + 1)); fi
+          
+          # Count CPU conditions
+          cpu_conditions=0
+          if [ "${{ github.event.inputs.cpu_no_throttling }}" = "true" ]; then cpu_conditions=$((cpu_conditions + 1)); fi
+          if [ "${{ github.event.inputs.cpu_2x_slowdown }}" = "true" ]; then cpu_conditions=$((cpu_conditions + 1)); fi
+          if [ "${{ github.event.inputs.cpu_4x_slowdown }}" = "true" ]; then cpu_conditions=$((cpu_conditions + 1)); fi
+          
+          # Total combinations = network × CPU
+          combinations=$((network_conditions * cpu_conditions))
           
           # Calculate total iterations across all combinations and products
           total_iterations=$((iterations_per_combo * combinations * products))
@@ -195,7 +212,9 @@ jobs:
           BENCHMARK_JOB_ID: ${{ matrix.job_id }}
           BENCHMARK_TOTAL_JOBS: ${{ needs.calculate-matrix.outputs.total_jobs }}
           BENCHMARK_NETWORK_SLOW_4G: ${{ github.event.inputs.network_slow_4g }}
+          BENCHMARK_NETWORK_FAST_4G: ${{ github.event.inputs.network_fast_4g }}
           BENCHMARK_NETWORK_NO_THROTTLING: ${{ github.event.inputs.network_no_throttling }}
+          BENCHMARK_CPU_2X_SLOWDOWN: ${{ github.event.inputs.cpu_2x_slowdown }}
           BENCHMARK_CPU_4X_SLOWDOWN: ${{ github.event.inputs.cpu_4x_slowdown }}
           BENCHMARK_CPU_NO_THROTTLING: ${{ github.event.inputs.cpu_no_throttling }}
           BENCHMARK_PRODUCT_MAGIC_CHECKOUT: ${{ github.event.inputs.product_magic_checkout }}

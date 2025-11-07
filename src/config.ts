@@ -57,7 +57,7 @@ function getDefaultConfig(): Config {
       },
       user_state: {
         new_user: {
-          is_logged_in: true,
+          is_logged_in: false,
           enabled: true,
         },
       },
@@ -112,11 +112,13 @@ function loadConfigFromEnv(): Config {
   const hasIndividualEnvVars =
     process.env.BENCHMARK_ITERATIONS ||
     process.env.BENCHMARK_NETWORK_SLOW_4G ||
+    process.env.BENCHMARK_NETWORK_FAST_4G ||
     process.env.BENCHMARK_NETWORK_NO_THROTTLING ||
+    process.env.BENCHMARK_CPU_2X_SLOWDOWN ||
     process.env.BENCHMARK_CPU_4X_SLOWDOWN ||
+    process.env.BENCHMARK_CPU_NO_THROTTLING ||
     process.env.BENCHMARK_PRODUCT_GOKWIK ||
-    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT ||
-    process.env.BENCHMARK_CPU_NO_THROTTLING;
+    process.env.BENCHMARK_PRODUCT_MAGIC_CHECKOUT;
 
   if (hasIndividualEnvVars) {
     logger.info('Building configuration from individual environment variables');
@@ -140,7 +142,9 @@ function buildConfigFromIndividualEnvVars(): Config {
 
   // Parse boolean environment variables (GitHub Actions passes 'true'/'false' as strings)
   const networkSlow4g = process.env.BENCHMARK_NETWORK_SLOW_4G === 'true';
+  const networkFast4g = process.env.BENCHMARK_NETWORK_FAST_4G === 'true';
   const networkNoThrottling = process.env.BENCHMARK_NETWORK_NO_THROTTLING === 'true';
+  const cpu2xSlowdown = process.env.BENCHMARK_CPU_2X_SLOWDOWN === 'true';
   const cpu4xSlowdown = process.env.BENCHMARK_CPU_4X_SLOWDOWN === 'true';
   const cpuNoThrottling = process.env.BENCHMARK_CPU_NO_THROTTLING === 'true';
 
@@ -166,16 +170,18 @@ function buildConfigFromIndividualEnvVars(): Config {
   }
 
   // Apply smart defaults: if no conditions are selected, enable no_throttling for both
-  const finalNetworkNoThrottling = networkNoThrottling || (!networkSlow4g && !networkNoThrottling);
-  const finalCpuNoThrottling = cpuNoThrottling || (!cpu4xSlowdown && !cpuNoThrottling);
+  const finalNetworkNoThrottling = networkNoThrottling || (!networkSlow4g && !networkFast4g && !networkNoThrottling);
+  const finalCpuNoThrottling = cpuNoThrottling || (!cpu2xSlowdown && !cpu4xSlowdown && !cpuNoThrottling);
 
   logger.info('Configuration built from individual environment variables', {
     iterations,
     networkConditions: {
       slow_4g: networkSlow4g,
+      fast_4g: networkFast4g,
       no_throttling: finalNetworkNoThrottling,
     },
     cpuConditions: {
+      '2x_slowdown': cpu2xSlowdown,
       '4x_slowdown': cpu4xSlowdown,
       no_throttling: finalCpuNoThrottling,
     },
@@ -204,6 +210,10 @@ function buildConfigFromIndividualEnvVars(): Config {
           ...defaultConfig.execution_matrix.network.slow_4g,
           enabled: networkSlow4g,
         },
+        fast_4g: {
+          ...defaultConfig.execution_matrix.network.fast_4g,
+          enabled: networkFast4g,
+        },
         no_throttling: {
           ...defaultConfig.execution_matrix.network.no_throttling,
           enabled: finalNetworkNoThrottling,
@@ -214,6 +224,10 @@ function buildConfigFromIndividualEnvVars(): Config {
         no_throttling: {
           ...defaultConfig.execution_matrix.cpu.no_throttling,
           enabled: finalCpuNoThrottling,
+        },
+        '2x_slowdown': {
+          ...defaultConfig.execution_matrix.cpu['2x_slowdown'],
+          enabled: cpu2xSlowdown,
         },
         '4x_slowdown': {
           ...defaultConfig.execution_matrix.cpu['4x_slowdown'],
