@@ -46,9 +46,11 @@ class MagicCheckoutPOM implements POM {
       const experienceFrame = this.page
         .locator('iframe[title="Experience Checkout"]')
         .contentFrame();
+
       await expect(experienceFrame.locator('body')).toBeVisible({
         timeout: 60000,
       });
+
       const buyNowButton = experienceFrame.getByRole('button', { name: 'Buy Now' });
 
       // Ensure button is visible before starting measurement
@@ -65,6 +67,7 @@ class MagicCheckoutPOM implements POM {
       // Wait for the checkout popup/iframe to appear and mark popup appearance
       const checkoutFrame = experienceFrame.locator('iframe[title="checkout"]').contentFrame();
       await expect(checkoutFrame.locator('body')).toBeVisible();
+
       await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.POPUP_APPEARS);
 
       // Start network monitoring from popup appearance
@@ -76,6 +79,7 @@ class MagicCheckoutPOM implements POM {
       // Wait for the contact number input to be visible and mark content appearance
       const contactNumberInput = checkoutFrame.getByTestId('contactNumber');
       await expect(contactNumberInput).toBeVisible();
+
       await this.performanceMonitor.markStart(PERFORMANCE_MARKERS.CONTENT_APPEARS);
 
       // Wait for main thread to be idle and mark idle state at the correct timestamp
@@ -125,14 +129,75 @@ class MagicCheckoutPOM implements POM {
           const duration = await this.performanceMonitor.measureDuration(metric.start, metric.end);
           this.performanceMonitor.recordMetric(metric.name, duration, 'ms');
         }
+
+        // Only for Magic Checkout
+        await this.calculateTTIInternal();
       }
 
       console.log(`✅ Checkout triggered successfully for ${this.productConfig.name}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.log(`❌ Failed to trigger checkout for ${this.productConfig.name}: ${errorMessage}`);
-
       throw error;
+    }
+  }
+
+  /**
+   * TTI = Base TTI + Serviceability Duration + Coupon Load Duration
+   */
+  private async calculateTTIInternal(): Promise<void> {
+    try {
+      console.log('🔍 Calculating TTI Internal metric...');
+
+      // Wait a bit more to allow performance marks to be recorded
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // Extract performance timeline from checkout iframe
+      const timeline = await this.page.evaluate(() => {
+        const marks: Record<string, number> = {};
+
+        try {
+          // Try to access the Experience Checkout iframe first
+          const expFrame = document.querySelector(
+            'iframe[title="Experience Checkout"]'
+          ) as HTMLIFrameElement;
+          if (expFrame && expFrame.contentDocument) {
+            // Then look for the checkout iframe inside the experience iframe
+            const checkoutFrame = expFrame.contentDocument.querySelector(
+              'iframe[title="checkout"]'
+            ) as HTMLIFrameElement;
+            if (checkoutFrame && checkoutFrame.contentWindow) {
+              const checkoutPerformance = checkoutFrame.contentWindow.performance;
+              if (checkoutPerformance) {
+                const entries = checkoutPerformance.getEntriesByType('mark');
+                entries.forEach((entry) => {
+                  marks[entry.name] = entry.startTime;
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.log('Error extracting performance marks:', error);
+        }
+
+        return marks;
+      });
+
+      const start = await this.performanceMonitor.getTimestamp(PERFORMANCE_MARKERS.CHECKOUT_START);
+      const end = timeline['magic-coupon-load-end'];
+
+      if (!start || !end) {
+        console.log('Failed to calculate TTI Internal metric: No start/end timestamp found');
+        return;
+      }
+      const ttiInternal = end - start;
+
+      // Record the TTI Internal metric
+      this.performanceMonitor.recordMetric('tti_internal', ttiInternal, 'ms');
+    } catch (error) {
+      console.log('⚠️ Error calculating TTI Internal metric:', error);
+      // Record zero as fallback to avoid missing data
+      this.performanceMonitor.recordMetric('tti_internal', 0, 'ms');
     }
   }
 }

@@ -38,7 +38,10 @@ export class PerformanceMonitor {
       {
         maxAttempts: 3,
         onRetry: (attempt, error) => {
-          this.performanceLogger.warn(`Retry attempt ${attempt} for markStart`, { markName, error: error.message });
+          this.performanceLogger.warn(`Retry attempt ${attempt} for markStart`, {
+            markName,
+            error: error.message,
+          });
         },
       }
     );
@@ -48,9 +51,12 @@ export class PerformanceMonitor {
    * Mark a performance measurement at a specific timestamp
    */
   public async markAtTimestamp(markName: string, timestamp: number): Promise<void> {
-    await this.page?.evaluate(({ name, time }) => {
-      performance.mark(name, { startTime: time });
-    }, { name: markName, time: timestamp });
+    await this.page?.evaluate(
+      ({ name, time }) => {
+        performance.mark(name, { startTime: time });
+      },
+      { name: markName, time: timestamp }
+    );
   }
 
   /**
@@ -130,6 +136,14 @@ export class PerformanceMonitor {
     return this.measurements;
   }
 
+  public async getTimestamp(markName: string): Promise<number | undefined> {
+    return (
+      (await this.page?.evaluate((name) => {
+        return performance.getEntriesByName(name)[0]?.startTime;
+      }, markName)) ?? 0
+    );
+  }
+
   /**
    * Reset all measurements
    */
@@ -153,7 +167,7 @@ export class PerformanceMonitor {
       return new Promise<number>((resolve) => {
         let idleTimer: NodeJS.Timeout;
         let observer: PerformanceObserver;
-        
+
         const resetIdleTimer = () => {
           clearTimeout(idleTimer);
           idleTimer = setTimeout(() => {

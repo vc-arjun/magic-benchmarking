@@ -28,6 +28,12 @@ function getDefaultConfig(): Config {
           latency: 400, // 400ms
           enabled: true,
         },
+        fast_4g: {
+          download_throughput: 1000000, // 1Mbps
+          upload_throughput: 1000000, // 1Mbps
+          latency: 100, // 100ms
+          enabled: false,
+        },
         no_throttling: {
           download_throughput: 0, // 0Mbps
           upload_throughput: 0, // 0Mbps
@@ -38,6 +44,10 @@ function getDefaultConfig(): Config {
       cpu: {
         no_throttling: {
           rate: 1,
+          enabled: true,
+        },
+        '2x_slowdown': {
+          rate: 2,
           enabled: true,
         },
         '4x_slowdown': {

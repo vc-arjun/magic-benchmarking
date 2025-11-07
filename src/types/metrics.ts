@@ -5,7 +5,8 @@ export type InitialLoadMetrics =
   | 'click_to_popup'
   | 'popup_to_content'
   | 'total_load_time'
-  | 'content_to_interactive';
+  | 'content_to_interactive'
+  | 'tti_internal';
 
 export type ExecutionContext = {
   network: string;
