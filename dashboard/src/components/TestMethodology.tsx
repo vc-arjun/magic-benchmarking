@@ -32,6 +32,35 @@ export const TestMethodology: React.FC<Props> = ({ data }) => {
     .filter(([, config]) => config.enabled)
     .map(([name, config]) => ({ name, config }));
 
+  // Calculate actual iterations from the data
+  // For newer reports, execution_config.iterations will be corrected by consolidation script
+  // For older reports, we need to calculate from actual measurements
+  const calculateActualIterations = () => {
+    if (data.products.length === 0) return data.execution_config.iterations;
+
+    // Get the first product's first context's first metric to count iterations
+    const firstProduct = data.products[0];
+    if (!firstProduct.results || firstProduct.results.length === 0)
+      return data.execution_config.iterations;
+
+    const firstContext = firstProduct.results[0];
+    const firstMetric = Object.values(firstContext.metrics)[0];
+
+    if (!firstMetric || !firstMetric.measurements) return data.execution_config.iterations;
+
+    return firstMetric.measurements.length;
+  };
+
+  const actualIterationsPerContext = calculateActualIterations();
+
+  // Calculate total tests run
+  const totalTestsRun =
+    enabledProducts.length *
+    enabledNetworks.length *
+    enabledCpus.length *
+    enabledUserStates.length *
+    actualIterationsPerContext;
+
   const formatNetworkCondition = (name: string, config: NetworkConfig) => {
     if (name === 'no_throttling') {
       return 'No Throttling (Full Speed)';
@@ -97,7 +126,7 @@ export const TestMethodology: React.FC<Props> = ({ data }) => {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-600">Iterations per test:</span>
-              <span className="font-medium">{data.execution_config.iterations}</span>
+              <span className="font-medium">{actualIterationsPerContext}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Browser:</span>
@@ -191,13 +220,7 @@ export const TestMethodology: React.FC<Props> = ({ data }) => {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Total Tests:</span>
-              <span className="font-medium">
-                {enabledProducts.length *
-                  enabledNetworks.length *
-                  enabledCpus.length *
-                  enabledUserStates.length *
-                  data.execution_config.iterations}
-              </span>
+              <span className="font-medium">{totalTestsRun}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-600">Metrics Tracked:</span>
@@ -209,11 +232,11 @@ export const TestMethodology: React.FC<Props> = ({ data }) => {
 
       <div className="mt-4 p-3 bg-blue-100 rounded-lg">
         <p className="text-sm text-blue-800">
-          <strong>Note:</strong> Each metric represents the average of{' '}
-          {data.execution_config.iterations} iteration
-          {data.execution_config.iterations !== 1 ? 's' : ''}&nbsp;under the specified conditions.
-          Tests are performed using automated browser testing with Playwright to ensure consistent
-          and reproducible results.
+          <strong>Note:</strong> Each metric represents the average of {actualIterationsPerContext}{' '}
+          iteration
+          {actualIterationsPerContext !== 1 ? 's' : ''}&nbsp;under the specified conditions. Tests
+          are performed using automated browser testing with Playwright to ensure consistent and
+          reproducible results.
         </p>
       </div>
     </div>

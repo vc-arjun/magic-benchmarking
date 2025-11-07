@@ -47,6 +47,7 @@ function consolidatePerformanceResults(resultsDir) {
     timestamp: new Date().toISOString(),
     execution_config: null,
     execution_matrix: null,
+    products_config: null,
     metrics_metadata: null,
     products: [],
     consolidation_info: {
@@ -69,6 +70,7 @@ function consolidatePerformanceResults(resultsDir) {
     if (!consolidated.execution_config) {
       consolidated.execution_config = data.execution_config;
       consolidated.execution_matrix = data.execution_matrix;
+      consolidated.products_config = data.products_config;
       consolidated.metrics_metadata = data.metrics_metadata;
     }
 
@@ -137,6 +139,28 @@ function consolidatePerformanceResults(resultsDir) {
   }
 
   consolidated.products = Array.from(productMap.values());
+
+  // Calculate and store actual total iterations per context
+  // This helps the dashboard show correct iteration counts
+  if (consolidated.products.length > 0) {
+    const firstProduct = consolidated.products[0];
+    if (firstProduct.results && firstProduct.results.length > 0) {
+      const firstContext = firstProduct.results[0];
+      const firstMetric = Object.values(firstContext.metrics)[0];
+      if (firstMetric && firstMetric.measurements) {
+        const actualIterationsPerContext = firstMetric.measurements.length;
+        
+        // Update execution_config with actual total iterations
+        if (consolidated.execution_config) {
+          consolidated.execution_config.actual_iterations_per_context = actualIterationsPerContext;
+          consolidated.execution_config.original_per_job_iterations = consolidated.execution_config.iterations;
+          consolidated.execution_config.iterations = actualIterationsPerContext;
+        }
+        
+        console.log(`📊 Calculated actual iterations per context: ${actualIterationsPerContext}`);
+      }
+    }
+  }
 
   // Generate final filename
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
