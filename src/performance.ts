@@ -173,15 +173,15 @@ export class PerformanceMonitor {
           idleTimer = setTimeout(() => {
             observer?.disconnect();
             // Return the timestamp when we determined the main thread is idle
-            // This is approximately when the last long task ended + 100ms
+            // This is approximately when the last long task ended + 500ms
             resolve(performance.now());
-          }, 100); // Consider idle after 100ms of no long tasks
+          }, 500); // Consider idle after 500ms of no long tasks
         };
 
         // Start the idle timer
         resetIdleTimer();
 
-        // Observe long tasks
+        // Observe long tasks (50ms+)
         if ('PerformanceObserver' in window) {
           observer = new PerformanceObserver(() => {
             resetIdleTimer();
