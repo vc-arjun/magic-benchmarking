@@ -36,7 +36,13 @@ export const PerformanceBarChart: React.FC<Props> = ({
               value: `${valueType.charAt(0).toUpperCase() + valueType.slice(1)} Time (ms)`,
               angle: -90,
               position: 'insideLeft',
+              fontSize: 12,
+              fontWeight: 400,
+              color: '#666',
             }}
+            tick={{ fontSize: 11, fill: '#666' }}
+            tickLine={{ stroke: '#ccc' }}
+            axisLine={{ stroke: '#ccc' }}
           />
           <Tooltip
             formatter={(value: string, name: string) => [
