@@ -68,6 +68,9 @@ export const TestMethodology: React.FC<Props> = ({ data }) => {
     if (name === 'slow_4g') {
       return `Slow 4G (${config.download_throughput / 1000}kbps, ${config.latency}ms latency)`;
     }
+    if (name === 'fast_4g') {
+      return `Fast 4G (${config.download_throughput / 1000}kbps, ${config.latency}ms latency)`;
+    }
     return name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
   };
 

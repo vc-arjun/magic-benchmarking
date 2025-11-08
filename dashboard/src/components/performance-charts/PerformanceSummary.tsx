@@ -467,10 +467,10 @@ export const PerformanceSummary: React.FC<Props> = ({ data, filteredData, filter
                                 })}
                               </tr>
 
-                              {/* Range Row */}
+                              {/* Min Row */}
                               <tr className="border-t border-gray-100">
                                 <td className="p-2 font-medium text-gray-600 border-r border-gray-200">
-                                  Range
+                                  Min
                                 </td>
                                 {products.map((product) => {
                                   const productStats = metricStats.byProduct[product];
@@ -487,23 +487,19 @@ export const PerformanceSummary: React.FC<Props> = ({ data, filteredData, filter
                                         isBest ? 'bg-green-50' : isWorst ? 'bg-red-50' : ''
                                       } ${products.indexOf(product) < products.length - 1 ? 'border-r border-gray-200' : ''}`}
                                     >
-                                      {productStats.min.toFixed(1)} - {productStats.max.toFixed(1)}{' '}
-                                      ms
+                                      {productStats.min.toFixed(1)} ms
                                     </td>
                                   );
                                 })}
                               </tr>
 
-                              {/* Variance Row */}
+                              {/* Max Row */}
                               <tr className="border-t border-gray-100">
                                 <td className="p-2 font-medium text-gray-600 border-r border-gray-200">
-                                  Variance
+                                  Max
                                 </td>
                                 {products.map((product) => {
                                   const productStats = metricStats.byProduct[product];
-                                  const variance =
-                                    ((productStats.max - productStats.min) / productStats.mean) *
-                                    100;
                                   const isBest = product === bestProduct && products.length > 1;
                                   const isWorst =
                                     product === worstProduct &&
@@ -513,11 +509,11 @@ export const PerformanceSummary: React.FC<Props> = ({ data, filteredData, filter
                                   return (
                                     <td
                                       key={product}
-                                      className={`text-center p-2 text-gray-600 ${
+                                      className={`text-center p-2 text-gray-700 ${
                                         isBest ? 'bg-green-50' : isWorst ? 'bg-red-50' : ''
                                       } ${products.indexOf(product) < products.length - 1 ? 'border-r border-gray-200' : ''}`}
                                     >
-                                      {variance.toFixed(1)}%
+                                      {productStats.max.toFixed(1)} ms
                                     </td>
                                   );
                                 })}
