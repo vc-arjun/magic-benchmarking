@@ -1,4 +1,5 @@
 import { ExecutionConfig, ExecutionMatrixConfig, ProductConfig } from './config';
+import { SystemInfo } from '../utils/system-info';
 
 export type InitialLoadMetrics =
   | 'click_to_content'
@@ -56,4 +57,5 @@ export type BenchmarkResults = {
   products_config: ProductConfig[];
   metrics_metadata: Record<InitialLoadMetrics, MetricMetadata>;
   products: ProductResults[];
+  system_info?: SystemInfo | undefined; // Optional for backward compatibility
 };

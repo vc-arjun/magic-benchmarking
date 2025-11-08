@@ -2,15 +2,23 @@ import { BenchmarkResults, ProductResults, MetricMetadata, InitialLoadMetrics } 
 import { Config } from './types/config';
 import { NetworkResults } from './types/network';
 import { METRICS } from './constants/metrics';
-import { logger } from './utils';
+import { logger, captureSystemInfo, SystemInfo } from './utils';
 
 export class ResultsManager {
   private config: Config;
   private productResults: ProductResults[] = [];
   private networkResults: NetworkResults[] = [];
+  private systemInfo: SystemInfo | null = null;
 
   constructor(config: Config) {
     this.config = config;
+  }
+
+  /**
+   * Initialize system information capture
+   */
+  public async initializeSystemInfo(): Promise<void> {
+    this.systemInfo = await captureSystemInfo();
   }
 
   /**
@@ -126,6 +134,7 @@ export class ResultsManager {
       products_config: this.config.products,
       metrics_metadata: metricsMetadata,
       products: this.productResults,
+      system_info: this.systemInfo || undefined,
     };
   }
 

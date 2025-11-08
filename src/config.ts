@@ -66,7 +66,7 @@ function getDefaultConfig(): Config {
       },
     },
     execution: {
-      iterations: 2,
+      iterations: 1,
       timeout: 60000,
       headless: true,
       browsers: ['chromium'],

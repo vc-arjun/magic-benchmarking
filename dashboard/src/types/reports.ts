@@ -33,6 +33,8 @@ import type {
   Config,
 } from '../../../src/types/config';
 
+import type { SystemInfo } from '../../../src/utils/system-info';
+
 // Re-export all imported types with modifications for dashboard compatibility
 export type {
   InitialLoadMetrics,
@@ -60,6 +62,7 @@ export type {
   OutputFormat,
   OutputConfig,
   Config,
+  SystemInfo,
 };
 
 // Dashboard-specific types with backward compatibility
@@ -70,6 +73,7 @@ export type BenchmarkResults = {
   products_config?: ProductConfig[]; // Optional for backward compatibility
   metrics_metadata: Record<InitialLoadMetrics, MetricMetadata>;
   products: ProductResults[];
+  system_info?: SystemInfo; // Optional for backward compatibility
 };
 export interface NetworkAnalysisReport {
   timestamp: string;

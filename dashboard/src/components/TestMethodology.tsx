@@ -1,5 +1,5 @@
 import { BenchmarkResults, NetworkConfig, CPUConfig, UserStateConfig } from '@/types/reports';
-import { Info, Globe, Cpu, Network, RotateCcw, Monitor, Clock } from 'lucide-react';
+import { Info, Globe, Cpu, Network, RotateCcw, Monitor, Clock, Server } from 'lucide-react';
 import React from 'react';
 
 type Props = {
@@ -63,23 +63,28 @@ export const TestMethodology: React.FC<Props> = ({ data }) => {
 
   const formatNetworkCondition = (name: string, config: NetworkConfig) => {
     if (name === 'no_throttling') {
-      return 'No Throttling (Full Speed)';
+      return "No Throttling (Uses machine's actual network speed)";
     }
     if (name === 'slow_4g') {
-      return `Slow 4G (${config.download_throughput / 1000}kbps, ${config.latency}ms latency)`;
+      return `Slow 4G (${config.download_throughput / 1000}kbps ↓, ${config.upload_throughput / 1000}kbps ↑, ${config.latency}ms latency)`;
     }
     if (name === 'fast_4g') {
-      return `Fast 4G (${config.download_throughput / 1000}kbps, ${config.latency}ms latency)`;
+      return `Fast 4G (${config.download_throughput / 1000}kbps ↓, ${config.upload_throughput / 1000}kbps ↑, ${config.latency}ms latency)`;
     }
     return name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
   };
 
   const formatCpuCondition = (name: string, config: CPUConfig) => {
     if (name === 'no_throttling') {
-      return 'No Throttling (Full Speed)';
+      return "No Throttling (Uses machine's actual CPU performance)";
     }
     if (name.includes('slowdown')) {
-      return `${config.rate}x CPU Slowdown`;
+      const slowdownFactor = name.includes('2x')
+        ? '2x'
+        : name.includes('4x')
+          ? '4x'
+          : `${config.rate}x`;
+      return `${slowdownFactor} CPU Slowdown (${config.rate}x throttling rate applied to baseline)`;
     }
     return name.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
   };
@@ -203,6 +208,55 @@ export const TestMethodology: React.FC<Props> = ({ data }) => {
             </div>
           </div>
         </div>
+
+        {/* System Information */}
+        {data.system_info && (
+          <div className="bg-white rounded-lg p-4 border border-gray-200">
+            <div className="flex items-center space-x-2 mb-3">
+              <Server className="w-4 h-4 text-blue-600" />
+              <h3 className="font-semibold text-gray-800">Test Machine Baseline</h3>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Platform:</span>
+                <span className="font-medium">
+                  {data.system_info.device.platform} {data.system_info.device.arch}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">CPU:</span>
+                <span className="font-medium">
+                  {data.system_info.device.cpus.cores} cores @ {data.system_info.device.cpus.speed}
+                  MHz
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">CPU Model:</span>
+                <span className="font-medium text-xs">{data.system_info.device.cpus.model}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Memory:</span>
+                <span className="font-medium">
+                  {Math.round(data.system_info.device.memory.total / 1024 / 1024 / 1024)}GB total
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">OS:</span>
+                <span className="font-medium">
+                  {data.system_info.device.os.type} {data.system_info.device.os.release}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Network:</span>
+                <span className="font-medium">{data.system_info.network.hostname}</span>
+              </div>
+            </div>
+            <div className="mt-3 p-2 bg-blue-50 rounded text-xs text-blue-700">
+              <strong>Throttling Context:</strong> The CPU and network throttling values shown above
+              are applied relative to this baseline machine configuration.
+            </div>
+          </div>
+        )}
 
         {/* Test Summary */}
         <div className="bg-white rounded-lg p-4 border border-gray-200">

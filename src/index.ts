@@ -15,6 +15,11 @@ const main = async () => {
   logger.info('');
 
   const resultsManager = new ResultsManager(CONFIG);
+  
+  // Capture system information for baseline context
+  logger.info('📊 Capturing system information...');
+  await resultsManager.initializeSystemInfo();
+  logger.info('✅ System information captured');
 
   for (const product of CONFIG.products) {
     try {
