@@ -2,6 +2,7 @@ import { BenchmarkResults, ProductResults, MetricMetadata, InitialLoadMetrics } 
 import { Config } from './types/config';
 import { NetworkResults } from './types/network';
 import { METRICS } from './constants/metrics';
+import { logger } from './utils';
 
 export class ResultsManager {
   private config: Config;
@@ -46,13 +47,13 @@ export class ResultsManager {
     // Save JSON file
     const jsonFilepath = path.join(resultsDir, `${baseFilename}.json`);
     fs.writeFileSync(jsonFilepath, JSON.stringify(results, null, 2));
-    console.log(`Consolidated performance results saved to: ${jsonFilepath}`);
+    logger.info(`Consolidated performance results saved to: ${jsonFilepath}`);
 
     // Save CSV file
     const csvFilepath = path.join(resultsDir, `${baseFilename}.csv`);
     const csvContent = this.buildCSV(results);
     fs.writeFileSync(csvFilepath, csvContent);
-    console.log(`Consolidated performance results saved to: ${csvFilepath}`);
+    logger.info(`Consolidated performance results saved to: ${csvFilepath}`);
   }
 
   /**
@@ -81,7 +82,7 @@ export class ResultsManager {
 
     fs.writeFileSync(filepath, JSON.stringify(consolidatedNetworkResults, null, 2));
     
-    console.log(`🔍 Network analysis results saved to: ${filepath}`);
+    logger.info(`🔍 Network analysis results saved to: ${filepath}`);
   }
 
   /**

@@ -3,6 +3,8 @@
  * Provides structured error types, validation, and recovery mechanisms
  */
 
+import { logger } from './logger';
+
 /**
  * Base error class for all application errors
  */
@@ -156,7 +158,9 @@ export class ErrorHandler {
     try {
       return await operation();
     } catch (error) {
-      console.warn('Operation failed, using fallback:', error);
+      logger.warn('Operation failed, using fallback:', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       return typeof fallback === 'function' ? await (fallback as () => T | Promise<T>)() : fallback;
     }
   }
@@ -174,9 +178,13 @@ export class ErrorHandler {
     };
 
     if (error instanceof AppError) {
-      console.error(`[${error.code}]`, errorInfo);
+      logger.error(`[${error.code}]`, error, errorInfo);
     } else {
-      console.error('[UNKNOWN_ERROR]', errorInfo);
+      logger.error(
+        '[UNKNOWN_ERROR]',
+        error instanceof Error ? error : new Error(String(error)),
+        errorInfo
+      );
     }
   }
 

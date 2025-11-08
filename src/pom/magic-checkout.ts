@@ -5,6 +5,7 @@ import { expect } from '@playwright/test';
 import { PerformanceMonitor } from '../performance';
 import { NetworkMonitor } from '../network-monitor';
 import { PERFORMANCE_MARKERS } from '../constants/performance';
+import { logger } from '../utils';
 
 class MagicCheckoutPOM implements POM {
   private page: Page;
@@ -26,21 +27,21 @@ class MagicCheckoutPOM implements POM {
 
   public async initialize(): Promise<void> {
     try {
-      console.log(`Initializing POM for ${this.productConfig.name}`);
+      logger.info(`Initializing POM for ${this.productConfig.name}`);
       await this.page.goto(this.productConfig.entry_url, {
         waitUntil: 'domcontentloaded',
         timeout: 60000,
       });
-      console.log(`POM initialized for ${this.productConfig.name}`);
+      logger.info(`POM initialized for ${this.productConfig.name}`);
     } catch (error) {
-      console.log(`Failed to initialize POM for ${this.productConfig.name}: ${error}`);
+      logger.error(`Failed to initialize POM for ${this.productConfig.name}: ${error}`);
       throw error;
     }
   }
 
   public async triggerCheckout(skipMetrics: boolean = false): Promise<void> {
     try {
-      console.log(`Triggering checkout for ${this.productConfig.name}`);
+      logger.info(`Triggering checkout for ${this.productConfig.name}`);
 
       // Get the iframe and button references
       const experienceFrame = this.page
@@ -74,7 +75,7 @@ class MagicCheckoutPOM implements POM {
 
       // Start network monitoring from popup appearance
       if (!skipMetrics) {
-        console.log('🔍 Starting network monitoring for Razorpay requests...');
+        logger.info('🔍 Starting network monitoring for Razorpay requests...');
         await this.networkMonitor.startMonitoring();
       }
 
@@ -96,7 +97,7 @@ class MagicCheckoutPOM implements POM {
       // Stop network monitoring when main thread is idle
       if (!skipMetrics) {
         await this.networkMonitor.stopMonitoring();
-        console.log('🔍 Network monitoring stopped - main thread is idle');
+        logger.info('🔍 Network monitoring stopped - main thread is idle');
       }
 
       // Calculate and store all metrics
@@ -138,10 +139,10 @@ class MagicCheckoutPOM implements POM {
         await this.calculateTTIInternal();
       }
 
-      console.log(`✅ Checkout triggered successfully for ${this.productConfig.name}`);
+      logger.info(`✅ Checkout triggered successfully for ${this.productConfig.name}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.log(`❌ Failed to trigger checkout for ${this.productConfig.name}: ${errorMessage}`);
+      logger.error(`❌ Failed to trigger checkout for ${this.productConfig.name}: ${errorMessage}`);
       throw error;
     }
   }
@@ -151,7 +152,7 @@ class MagicCheckoutPOM implements POM {
    */
   private async calculateTTIInternal(): Promise<void> {
     try {
-      console.log('🔍 Calculating TTI Internal metric...');
+      logger.info('🔍 Calculating TTI Internal metric...');
 
       // Wait a bit more to allow performance marks to be recorded
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -181,7 +182,9 @@ class MagicCheckoutPOM implements POM {
             }
           }
         } catch (error) {
-          console.log('Error extracting performance marks:', error);
+          logger.warn('Error extracting performance marks:', {
+            error: error instanceof Error ? error.message : String(error),
+          });
         }
 
         return marks;
@@ -191,7 +194,7 @@ class MagicCheckoutPOM implements POM {
       const end = timeline['magic-coupon-load-end'];
 
       if (!start || !end) {
-        console.log('Failed to calculate TTI Internal metric: No start/end timestamp found');
+        logger.warn('Failed to calculate TTI Internal metric: No start/end timestamp found');
         return;
       }
       const ttiInternal = end - start;
@@ -199,7 +202,9 @@ class MagicCheckoutPOM implements POM {
       // Record the TTI Internal metric
       this.performanceMonitor.recordMetric('tti_internal', ttiInternal, 'ms');
     } catch (error) {
-      console.log('⚠️ Error calculating TTI Internal metric:', error);
+      logger.warn('⚠️ Error calculating TTI Internal metric:', {
+        error: error instanceof Error ? error.message : String(error),
+      });
       // Record zero as fallback to avoid missing data
       this.performanceMonitor.recordMetric('tti_internal', 0, 'ms');
     }

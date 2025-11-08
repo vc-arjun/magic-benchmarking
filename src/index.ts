@@ -1,27 +1,28 @@
 import { CONFIG } from './config';
 import { TestExecutor } from './executor';
 import { ResultsManager } from './results-manager';
+import { logger } from './utils';
 
 const main = async () => {
-  console.log('Starting Performance Benchmarking');
-  console.log('='.repeat(60));
+  logger.info('Starting Performance Benchmarking');
+  logger.info('='.repeat(60));
 
   // Log product configuration
-  console.log('\n📋 Product Configuration:');
+  logger.info('\n📋 Product Configuration:');
   for (const product of CONFIG.products) {
-    console.log(`  ${product.name}: ${product.enabled ? '✅ Enabled' : '❌ Disabled'}`);
+    logger.info(`  ${product.name}: ${product.enabled ? '✅ Enabled' : '❌ Disabled'}`);
   }
-  console.log('');
+  logger.info('');
 
   const resultsManager = new ResultsManager(CONFIG);
 
   for (const product of CONFIG.products) {
     try {
       if (!product.enabled) {
-        console.log(`Skipping ${product.name} as it is not enabled`);
+        logger.info(`Skipping ${product.name} as it is not enabled`);
         continue;
       }
-      console.log(`\nBenchmarking performance of ${product.name}`);
+      logger.info(`\nBenchmarking performance of ${product.name}`);
       const testExecutor = new TestExecutor(product);
       await testExecutor.run();
 
@@ -36,12 +37,12 @@ const main = async () => {
       // Check for failures and log them
       if (testExecutor.hasFailures()) {
         const failures = testExecutor.getFailedIterations();
-        console.log(`⚠️  Completed benchmarking with ${failures.length} failed iterations for ${product.name}`);
+        logger.warn(`⚠️  Completed benchmarking with ${failures.length} failed iterations for ${product.name}`);
       } else {
-        console.log(`✅ Completed benchmarking performance of ${product.name} - all iterations successful`);
+        logger.info(`✅ Completed benchmarking performance of ${product.name} - all iterations successful`);
       }
     } catch (error) {
-      console.error(`Failed to benchmark performance of ${product.name}: ${error}`);
+      logger.error(`Failed to benchmark performance of ${product.name}: ${error}`);
       process.exit(1);
     }
   }
@@ -49,7 +50,7 @@ const main = async () => {
   // Save all results (performance and network) using unified method
   await resultsManager.saveAllResults();
 
-  console.log('\n🎉 All performance benchmarking completed!');
+  logger.info('\n🎉 All performance benchmarking completed!');
 };
 
-main().catch(console.error);
+main().catch((error) => logger.error('Main execution failed:', error));

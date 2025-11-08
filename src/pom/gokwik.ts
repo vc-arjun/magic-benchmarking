@@ -5,6 +5,7 @@ import { expect } from '@playwright/test';
 import { PerformanceMonitor } from '../performance';
 import { NetworkMonitor } from '../network-monitor';
 import { PERFORMANCE_MARKERS } from '../constants/performance';
+import { logger } from '../utils';
 
 class GokwikPOM implements POM {
   private page: Page;
@@ -26,21 +27,21 @@ class GokwikPOM implements POM {
 
   public async initialize(): Promise<void> {
     try {
-      console.log(`Initializing POM for ${this.productConfig.name}`);
+      logger.info(`Initializing POM for ${this.productConfig.name}`);
       await this.page.goto(this.productConfig.entry_url, {
         waitUntil: 'domcontentloaded',
         timeout: 60000,
       });
-      console.log(`POM initialized for ${this.productConfig.name}`);
+      logger.info(`POM initialized for ${this.productConfig.name}`);
     } catch (error) {
-      console.log(`Failed to initialize POM for ${this.productConfig.name}: ${error}`);
+      logger.error(`Failed to initialize POM for ${this.productConfig.name}: ${error}`);
       throw error;
     }
   }
 
   public async triggerCheckout(skipMetrics: boolean = false): Promise<void> {
     try {
-      console.log(`Triggering checkout for ${this.productConfig.name}`);
+      logger.info(`Triggering checkout for ${this.productConfig.name}`);
 
       await this.page.getByRole('button', { name: 'Add to Cart' }).first().click({
         timeout: 60000,
@@ -73,7 +74,7 @@ class GokwikPOM implements POM {
 
       // Start network monitoring from popup appearance
       if (!skipMetrics) {
-        console.log('🔍 Starting network monitoring for Razorpay requests...');
+        logger.info('🔍 Starting network monitoring for Razorpay requests...');
         await this.networkMonitor.startMonitoring();
       }
 
@@ -96,7 +97,7 @@ class GokwikPOM implements POM {
       // Stop network monitoring when main thread is idle
       if (!skipMetrics) {
         await this.networkMonitor.stopMonitoring();
-        console.log('🔍 Network monitoring stopped - main thread is idle');
+        logger.info('🔍 Network monitoring stopped - main thread is idle');
       }
 
       // Calculate and store all metrics
@@ -135,10 +136,10 @@ class GokwikPOM implements POM {
         }
       }
 
-      console.log(`✅ Checkout triggered successfully for ${this.productConfig.name}`);
+      logger.info(`✅ Checkout triggered successfully for ${this.productConfig.name}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.log(`❌ Failed to trigger checkout for ${this.productConfig.name}: ${errorMessage}`);
+      logger.error(`❌ Failed to trigger checkout for ${this.productConfig.name}: ${errorMessage}`);
 
       throw error;
     }

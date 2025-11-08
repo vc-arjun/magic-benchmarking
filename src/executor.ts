@@ -310,17 +310,20 @@ export class TestExecutor {
     const failedCount = this.failedIterations.length;
     const successCount = totalIterations - failedCount;
     
-    console.log(`\n📊 Execution Summary for ${this.product.name}:`);
-    console.log(`   Total iterations: ${totalIterations}`);
-    console.log(`   Successful: ${successCount} ✅`);
-    console.log(`   Failed: ${failedCount} ❌`);
+    this.executorLogger.info(`📊 Execution Summary for ${this.product.name}:`, {
+      totalIterations,
+      successCount,
+      failedCount
+    });
     
     if (failedCount > 0) {
-      console.log(`\n❌ Failed iterations:`);
-      for (const failure of this.failedIterations) {
-        console.log(`   - Iteration ${failure.iteration} (${JSON.stringify(failure.combination)}): ${failure.error}`);
-      }
-      
+      this.executorLogger.warn(`❌ Failed iterations:`, {
+        failures: this.failedIterations.map(f => ({
+          iteration: f.iteration,
+          combination: f.combination,
+          error: f.error
+        }))
+      });
     }
   }
 
@@ -387,8 +390,7 @@ export class TestExecutor {
             return true;
           },
           onRetry: (attempt, error, delayMs) => {
-            console.log(`🔄 Retry attempt ${attempt}/${retryConfig.max_attempts - 1} for iteration ${iteration} after ${Math.round(delayMs / 1000)}s`);
-            this.executorLogger.warn(`Retry attempt ${attempt} for iteration ${iteration}`, {
+            this.executorLogger.warn(`🔄 Retry attempt ${attempt}/${retryConfig.max_attempts - 1} for iteration ${iteration} after ${Math.round(delayMs / 1000)}s`, {
               error: error.message,
               delayMs,
               combination
@@ -400,7 +402,7 @@ export class TestExecutor {
       this.executorLogger.debug(`Iteration ${iteration} completed successfully`);
     } catch (error) {
       const lastError = error instanceof Error ? error : new Error(String(error));
-      console.log(`💥 All retry attempts failed for iteration ${iteration}: ${lastError.message}`);
+      this.executorLogger.error(`💥 All retry attempts failed for iteration ${iteration}: ${lastError.message}`, lastError);
       
       // Track failed iteration
       this.failedIterations.push({

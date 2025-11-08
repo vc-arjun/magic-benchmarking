@@ -3,6 +3,8 @@
  * Provides reusable functions for data manipulation, formatting, and common operations
  */
 
+import { logger } from './logger';
+
 /**
  * Delay execution for specified milliseconds
  */
@@ -399,7 +401,7 @@ export function generateIterationDelay(iteration: number): number {
   if (iteration > 0 && iteration % 10 === 0) {
     const extendedDelay = randomBetween(30000, 60000);
     const jitteredExtendedDelay = randomDelayWithJitter(extendedDelay, 15);
-    console.log(
+    logger.info(
       `🕐 Extended delay after iteration ${iteration}: ${Math.round(jitteredExtendedDelay / 1000)}s`
     );
     return jitteredExtendedDelay;
