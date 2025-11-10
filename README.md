@@ -159,3 +159,39 @@ npm run lint:fix
 # Format code
 npm run pretty:fix
 ```
+
+### Dashboard Authentication
+
+The dashboard is protected with key-based authentication. To access the dashboard:
+
+#### Local Development
+
+1. **Set the authentication key**:
+
+```bash
+# Create .env.local in the dashboard directory
+cd dashboard
+echo "NEXT_PUBLIC_DASHBOARD_KEY=your-custom-secure-key" > .env.local
+```
+
+2. **Access the dashboard**: Navigate to the dashboard URL and enter the authentication key when prompted
+
+3. **Key persistence**: Once authenticated, the key is stored in localStorage for future visits
+
+4. **Logout**: Use the logout button in the dashboard header to clear authentication
+
+#### Production / GitHub Pages Deployment
+
+For CI/CD deployment, you need to set the authentication key as a GitHub Secret:
+
+1. **Generate a secure key**:
+   ```bash
+   openssl rand -base64 32
+   ```
+
+2. **Add to GitHub Secrets**:
+   - Go to repository Settings → Secrets and variables → Actions
+   - Create new secret: `DASHBOARD_AUTH_KEY`
+   - Paste your generated key
+
+3. **The workflow automatically injects the key** during dashboard build

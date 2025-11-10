@@ -10,15 +10,18 @@ import {
   Download,
   FileText,
   FileSpreadsheet,
+  LogOut,
 } from 'lucide-react';
 import { useReports } from './hooks/useReports';
 import { ReportCard } from '@/components/ReportCard';
 import { Loading } from '@/components/Loading';
 import { Error } from '@/components/Error';
 import { downloadAllReportsAsJSON, downloadAllReportsAsCSV } from '@/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Dashboard = () => {
   const { reports, loading, error, refreshReports } = useReports();
+  const { logout } = useAuth();
   const [downloadDropdownOpen, setDownloadDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -114,6 +117,15 @@ const Dashboard = () => {
                 )}
               </div>
             )}
+
+            <button
+              onClick={logout}
+              className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 flex items-center gap-2"
+              title="Logout"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </button>
           </div>
         </div>
       </div>

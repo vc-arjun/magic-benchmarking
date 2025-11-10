@@ -331,6 +331,8 @@ jobs:
 
       - name: Build dashboard
         run: cd dashboard && npm run build
+        env:
+          NEXT_PUBLIC_DASHBOARD_KEY: ${{ secrets.DASHBOARD_AUTH_KEY }}
 
       - name: Verify final reports
         run: |
