@@ -75,6 +75,12 @@ With these realistic settings, you should expect:
    - **Consolidate results** from all jobs into a single comprehensive report
    - **Deploy the dashboard** only if all jobs succeed
 
+4. **Preview Results**:
+   - Once the CI build succeeds, go to [https://vc-arjun.github.io/magic-benchmarking](https://vc-arjun.github.io/magic-benchmarking).
+   - From the list of reports, click on the report you want to preview, a detailed dashboard will be opened.
+   - You can also download the report using the Download button on the top-right corner, in JSON and CSV formats.
+   - Use the Visualization controls to alter the graphs and values for different views.
+
 ## Development
 
 ### Prerequisites
